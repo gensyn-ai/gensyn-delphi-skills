@@ -153,10 +153,11 @@ const { approvalNeeded, transactionHash } = await client.ensureTokenApproval({
 ### Private key (development)
 ```env
 DELPHI_SIGNER_TYPE=private_key
-DELPHI_PRIVATE_KEY=0x<hex-private-key>
-GENSYN_RPC_URL=https://...
-GENSYN_CHAIN_ID=685685
-DELPHI_GATEWAY_CONTRACT=0x469388CD2498b43925f562FaA333D95135b66c06
+WALLET_PRIVATE_KEY=0x<hex-private-key>
+# Optional overrides (defaults are set automatically by DELPHI_NETWORK=testnet):
+# GENSYN_RPC_URL=https://gensyn-testnet.g.alchemy.com/public
+# GENSYN_CHAIN_ID=685685
+# DELPHI_GATEWAY_CONTRACT=0x469388CD2498b43925f562FaA333D95135b66c06
 ```
 
 ### CDP Server Wallet (production)
@@ -166,9 +167,10 @@ CDP_API_KEY_ID=<key-id>
 CDP_API_KEY_SECRET=<key-secret>
 CDP_WALLET_SECRET=<wallet-secret>
 CDP_WALLET_ADDRESS=0x<wallet-address>
-GENSYN_RPC_URL=https://...
-GENSYN_CHAIN_ID=685685
-DELPHI_GATEWAY_CONTRACT=0x469388CD2498b43925f562FaA333D95135b66c06
+# Optional overrides (defaults are set automatically by DELPHI_NETWORK=testnet):
+# GENSYN_RPC_URL=https://gensyn-testnet.g.alchemy.com/public
+# GENSYN_CHAIN_ID=685685
+# DELPHI_GATEWAY_CONTRACT=0x469388CD2498b43925f562FaA333D95135b66c06
 ```
 
 CDP Server Wallets are managed by Coinbase Developer Platform. The SDK uses `@coinbase/cdp-sdk` under the hood.
