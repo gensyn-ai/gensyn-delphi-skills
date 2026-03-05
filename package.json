@@ -1,0 +1,22 @@
+{
+  "type": "module",
+  "scripts": {
+    "list-markets": "tsx scripts/list-markets.ts",
+    "get-market": "tsx scripts/get-market.ts",
+    "quote-buy": "tsx scripts/quote-buy.ts",
+    "quote-sell": "tsx scripts/quote-sell.ts",
+    "buy-shares": "tsx scripts/buy-shares.ts",
+    "sell-shares": "tsx scripts/sell-shares.ts",
+    "list-positions": "tsx scripts/list-positions.ts",
+    "redeem": "tsx scripts/redeem.ts",
+    "token-approval": "tsx scripts/token-approval.ts"
+  },
+  "dependencies": {
+    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk#sr-usage-defaults"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
