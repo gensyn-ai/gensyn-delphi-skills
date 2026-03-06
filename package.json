@@ -11,12 +11,14 @@
     "redeem": "tsx scripts/redeem.ts",
     "token-approval": "tsx scripts/token-approval.ts"
   },
-  "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk#sr-usage-defaults"
-  },
   "devDependencies": {
     "@types/node": "^25.3.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk#sr-usage-defaults",
+    "dotenv": "^16.4.0",
+    "viem": "^2.21.0"
   }
 }
