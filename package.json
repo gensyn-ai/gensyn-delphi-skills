@@ -2,7 +2,6 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "postinstall": "npm run build",
     "list-markets": "tsx scripts/list-markets.ts",
     "get-market": "tsx scripts/get-market.ts",
     "quote-buy": "tsx scripts/quote-buy.ts",
