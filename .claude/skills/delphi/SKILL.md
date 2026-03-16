@@ -135,6 +135,7 @@ These override the network defaults if you need to point at a custom endpoint:
 | `GENSYN_RPC_URL` | Custom RPC endpoint |
 | `GENSYN_CHAIN_ID` | Custom chain ID |
 | `DELPHI_GATEWAY_CONTRACT` | Custom gateway contract address |
+| `DELPHI_TOKEN_ADDRESS` | Custom collateral token address (defaults per network if unset) |
 | `DELPHI_API_BASE_URL` | Custom API base URL |
 | `DELPHI_SIGNER_TYPE` | `"private_key"` or `"cdp_server_wallet"` (default) |
 | `CF_ACCESS_ID` | Cloudflare Access client ID |
@@ -316,23 +317,23 @@ const { transactionHash } = await client.sellShares({
 
 ### Get wallet balances
 
-The SDK exposes read-only balance methods for the configured signer wallet:
+The SDK exposes read-only balance methods for the configured signer wallet. The collateral token address defaults to the network default (or `DELPHI_TOKEN_ADDRESS` if set); you can omit it when calling the balance methods.
 
 ```typescript
 // Native ETH balance
 const ethBalance: bigint = await client.getEthBalance();
 const ethFormatted = (Number(ethBalance) / 1e18).toFixed(6) + " ETH";
 
-// ERC-20 balance (raw)
-const tokenAddress = "0x..." as `0x${string}`;  // e.g. USDC from DELPHI_USDC_ADDRESS or Gateway.token(market)
-const rawBalance: bigint = await client.getErc20Balance(tokenAddress);
-
-// ERC-20 balance with decimals (recommended for display)
-const { balance, decimals } = await client.getErc20BalanceWithDecimals(tokenAddress);
+// ERC-20 balance using default token (network / DELPHI_TOKEN_ADDRESS)
+const rawBalance: bigint = await client.getErc20Balance();
+const { balance, decimals } = await client.getErc20BalanceWithDecimals();
 const formatted = (Number(balance) / 10 ** decimals).toFixed(decimals > 6 ? 6 : decimals);
+
+// Optional: use a specific token address
+const customBalance = await client.getErc20Balance("0x..." as `0x${string}`);
 ```
 
-> **Tip**: See `scripts/get-wallet-balances.ts` for a complete working example. Set optional `DELPHI_USDC_ADDRESS` in `.env` to show USDC balance.
+> **Tip**: See `scripts/get-wallet-balances.ts` for a complete working example.
 
 ### List positions
 

@@ -1,9 +1,7 @@
 /**
- * Get ETH and optional ERC-20 (e.g. USDC) balances for the configured Delphi signer.
+ * Get ETH and collateral token (ERC-20) balances for the configured Delphi signer.
+ * Uses the SDK default token address (network default or DELPHI_TOKEN_ADDRESS).
  * Usage: npx tsx scripts/get-wallet-balances.ts
- *
- * Set optional DELPHI_USDC_ADDRESS in .env to include USDC (or other token) balance.
- * Example: npx tsx scripts/get-wallet-balances.ts
  */
 import { client } from "./client.js";
 
@@ -20,18 +18,9 @@ async function main() {
   console.log("  raw:    " + ethBalance.toString());
   console.log("  approx: " + (Number(ethBalance) / 1e18).toFixed(6) + " ETH\n");
 
-  const usdcAddress = process.env.DELPHI_USDC_ADDRESS as `0x${string}` | undefined;
-  if (!usdcAddress) {
-    console.log(
-      "Tip: Set DELPHI_USDC_ADDRESS in .env to show USDC (or other ERC-20) balance.",
-    );
-    return;
-  }
-
-  const { balance, decimals } = await client.getErc20BalanceWithDecimals(
-    usdcAddress,
-  );
-  console.log("ERC-20 token: " + usdcAddress);
+  const tokenAddress = client.getTokenAddress();
+  const { balance, decimals } = await client.getErc20BalanceWithDecimals();
+  console.log("ERC-20 (collateral token): " + tokenAddress);
   console.log("  decimals: " + decimals);
   console.log("  raw:      " + balance.toString());
   console.log("  formatted: " + formatWithDecimals(balance, decimals));
