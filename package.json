@@ -10,7 +10,8 @@
     "sell-shares": "tsx scripts/sell-shares.ts",
     "list-positions": "tsx scripts/list-positions.ts",
     "redeem": "tsx scripts/redeem.ts",
-    "token-approval": "tsx scripts/token-approval.ts"
+    "token-approval": "tsx scripts/token-approval.ts",
+    "liquidate": "tsx scripts/liquidate.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
@@ -18,7 +19,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk#sr-usage-defaults",
+    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk#sr-pr-liquidations",
     "dotenv": "^16.4.0",
     "viem": "^2.21.0"
   }

@@ -15,6 +15,7 @@ Gensyn Delphi is a dynamic parimutuel prediction market on Gensyn. All interacti
 - User wants to buy or sell outcome shares
 - User wants to check their portfolio, positions, or trade history
 - User wants to redeem winnings from a resolved market
+- User wants to recover funds from expired markets they participated in (liquidations)
 - User wants to check or set token approval for trading
 - Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
 
@@ -41,6 +42,7 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/list-positions.ts` | List wallet positions | `npx tsx scripts/list-positions.ts [wallet-address]` |
 | `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address>` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount]` |
+| `scripts/liquidate.ts` | Liquidate positions in expired markets for a wallet | `npx tsx scripts/liquidate.ts [wallet-address]` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -323,7 +325,8 @@ const { positions } = await client.listPositions({
 
 for (const p of positions ?? []) {
   const shares = Number(BigInt(p.shares)) / 1e18;
-  console.log(`Market ${p.marketProxy} | Outcome ${p.outcomeIdx} | ${shares} shares`);
+  const marketStatus = (p as any).marketStatus ?? "unknown";
+  console.log(`Market ${p.marketProxy} | Status ${marketStatus} | Outcome ${p.outcomeIdx} | ${shares} shares`);
 }
 ```
 
@@ -355,6 +358,31 @@ for (const r of results) {
   else console.error(`Failed ${r.marketAddress}: ${r.error}`);
 }
 ```
+
+### Liquidate expired markets (portfolio recovery for unredeemable markets)
+
+Use this pattern when the user wants to recover what they can from **expired** markets they participated in:
+
+```typescript
+const wallet = "0x..." as `0x${string}`;
+const { positions } = await client.listPositions({ wallet, redeemed: false, limit: 100 });
+
+const expired: `0x${string}`[] = [];
+
+for (const p of positions ?? []) {
+  const status = (p as any).marketStatus;
+  if (status === "expired") expired.push(p.marketProxy as `0x${string}`);
+}
+
+if (expired.length > 0) {
+  const { results, totalTokensOut } = await (client as any).liquidatePositions({
+    marketAddresses: expired,
+  });
+  // handle results...
+}
+```
+
+The `scripts/liquidate.ts` script automates this flow: it scans the wallet for unredeemed positions, filters only expired markets, and liquidates positions in those expired markets.
 
 ### Token approval
 
@@ -398,3 +426,4 @@ const { approvalNeeded } = await client.ensureTokenApproval({
 | [reference/trading.md](reference/trading.md) | Trading mechanics, slippage formulas, parimutuel pricing explainer |
 | [reference/positions.md](reference/positions.md) | `Position`/`Trade` type schemas, batch redemption patterns, portfolio estimation |
 | [reference/onchain.md](reference/onchain.md) | Full Gateway ABI function list, direct `viem` read patterns, signing config |
+
