@@ -11,7 +11,8 @@
     "list-positions": "tsx scripts/list-positions.ts",
     "redeem": "tsx scripts/redeem.ts",
     "token-approval": "tsx scripts/token-approval.ts",
-    "liquidate": "tsx scripts/liquidate.ts"
+    "liquidate": "tsx scripts/liquidate.ts",
+    "get-wallet-balances": "tsx scripts/get-wallet-balances.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",

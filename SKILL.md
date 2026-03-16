@@ -17,6 +17,7 @@ Gensyn Delphi is a dynamic parimutuel prediction market on Gensyn. All interacti
 - User wants to redeem winnings from a resolved market
 - User wants to recover funds from expired markets they participated in (liquidations)
 - User wants to check or set token approval for trading
+- User wants to see wallet balances (ETH, USDC, or other ERC-20) for the configured signer
 - Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -43,6 +44,7 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address>` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount]` |
 | `scripts/liquidate.ts` | Liquidate positions in expired markets | `npx tsx scripts/liquidate.ts <market-address> [market-address ...]` |
+| `scripts/get-wallet-balances.ts` | Get ETH and ERC-20 (e.g. USDC) balances for signer | `npx tsx scripts/get-wallet-balances.ts` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -311,6 +313,26 @@ const { transactionHash } = await client.sellShares({
   minTokensOut,
 });
 ```
+
+### Get wallet balances
+
+The SDK exposes read-only balance methods for the configured signer wallet:
+
+```typescript
+// Native ETH balance
+const ethBalance: bigint = await client.getEthBalance();
+const ethFormatted = (Number(ethBalance) / 1e18).toFixed(6) + " ETH";
+
+// ERC-20 balance (raw)
+const tokenAddress = "0x..." as `0x${string}`;  // e.g. USDC from DELPHI_USDC_ADDRESS or Gateway.token(market)
+const rawBalance: bigint = await client.getErc20Balance(tokenAddress);
+
+// ERC-20 balance with decimals (recommended for display)
+const { balance, decimals } = await client.getErc20BalanceWithDecimals(tokenAddress);
+const formatted = (Number(balance) / 10 ** decimals).toFixed(decimals > 6 ? 6 : decimals);
+```
+
+> **Tip**: See `scripts/get-wallet-balances.ts` for a complete working example. Set optional `DELPHI_USDC_ADDRESS` in `.env` to show USDC balance.
 
 ### List positions
 
