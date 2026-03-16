@@ -30,6 +30,9 @@ interface Position {
   shares: string;           // 18-decimal bigint as string — parse with BigInt()
   redeemed: boolean;
   tokensRedeemed: string;   // 6-decimal bigint as string — parse with BigInt()
+  // Current market status (API returns the string value, contract returns the int enum):
+  // 0 -> "open", 1 -> "awaiting_settlement", 2 -> "settled", 3 -> "expired"
+  marketStatus: "open" | "awaiting_settlement" | "settled" | "expired";
 }
 ```
 

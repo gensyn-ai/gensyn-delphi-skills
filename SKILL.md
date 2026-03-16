@@ -323,7 +323,8 @@ const { positions } = await client.listPositions({
 
 for (const p of positions ?? []) {
   const shares = Number(BigInt(p.shares)) / 1e18;
-  console.log(`Market ${p.marketProxy} | Outcome ${p.outcomeIdx} | ${shares} shares`);
+  const marketStatus = (p as any).marketStatus ?? "unknown";
+  console.log(`Market ${p.marketProxy} | Status ${marketStatus} | Outcome ${p.outcomeIdx} | ${shares} shares`);
 }
 ```
 

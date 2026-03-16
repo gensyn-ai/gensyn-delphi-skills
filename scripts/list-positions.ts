@@ -26,7 +26,10 @@ if (!positions || positions.length === 0) {
 console.log("Found " + positions.length + " active position(s):\n");
 for (const p of positions) {
   const shares = (Number(BigInt(p.shares)) / 1e18).toFixed(4);
+  const marketStatus = (p as any).marketStatus ?? "unknown";
+
   console.log("Market:  " + p.marketProxy);
+  console.log("Status:  " + marketStatus);
   console.log("Outcome: " + p.outcomeIdx);
   console.log("Shares:  " + shares);
   console.log("---");

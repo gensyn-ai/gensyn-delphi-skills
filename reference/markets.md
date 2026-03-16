@@ -71,11 +71,19 @@ Returns the same `Market` type. The `id` comes from `listMarkets`.
 
 ## Market status values
 
+```typescript
+// API returns these values as strings.
+// The underlying contract may expose them as an int enum:
+// 0 -> "open", 1 -> "awaiting_settlement", 2 -> "settled", 3 -> "expired"
+type MarketStatus = "open" | "awaiting_settlement" | "settled" | "expired";
+```
+
 | Status | Meaning |
 |--------|---------|
 | `open` | Trading active |
-| `closed` | Trading deadline passed, awaiting settlement |
+| `awaiting_settlement` | Trading deadline passed, awaiting settlement |
 | `settled` | Winner submitted, positions redeemable |
+| `expired` | Market expired without settlement (positions not redeemable) |
 
 ## Paginating through all markets
 
