@@ -42,7 +42,7 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/list-positions.ts` | List wallet positions | `npx tsx scripts/list-positions.ts [wallet-address]` |
 | `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address>` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount]` |
-| `scripts/liquidate.ts` | Liquidate positions in expired markets for a wallet | `npx tsx scripts/liquidate.ts [wallet-address]` |
+| `scripts/liquidate.ts` | Liquidate positions in expired markets | `npx tsx scripts/liquidate.ts <market-address> [market-address ...]` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -367,22 +367,56 @@ Use this pattern when the user wants to recover what they can from **expired** m
 const wallet = "0x..." as `0x${string}`;
 const { positions } = await client.listPositions({ wallet, redeemed: false, limit: 100 });
 
-const expired: `0x${string}`[] = [];
+type LiquidationResult = {
+  marketAddress: `0x${string}`;
+  success: boolean;
+  tokensOut?: bigint;
+  error?: string;
+};
+
+const expiredMarkets = new Set<string>();
 
 for (const p of positions ?? []) {
   const status = (p as any).marketStatus;
-  if (status === "expired") expired.push(p.marketProxy as `0x${string}`);
+  if (status === "expired") expiredMarkets.add(p.marketProxy);
 }
 
-if (expired.length > 0) {
-  const { results, totalTokensOut } = await (client as any).liquidatePositions({
-    marketAddresses: expired,
-  });
-  // handle results...
+const expired = Array.from(expiredMarkets) as `0x${string}`[];
+
+const results: LiquidationResult[] = [];
+let totalTokensOut = 0n;
+
+for (const marketAddress of expired) {
+  const outcomeIndices = Array.from(
+    new Set(
+      (positions ?? [])
+        .filter((p) => p.marketProxy === marketAddress)
+        .map((p) => Number((p as any).outcomeIdx)),
+    ),
+  );
+
+  if (outcomeIndices.length === 0) continue;
+
+  try {
+    const { totalTokensOut: tokensOut } = await client.liquidate({
+      marketAddress,
+      outcomeIndices,
+    });
+    results.push({ marketAddress, success: true, tokensOut });
+    totalTokensOut += tokensOut;
+  } catch (e: any) {
+    results.push({
+      marketAddress,
+      success: false,
+      error: e.shortMessage ?? e.message ?? "Unknown error",
+    });
+  }
 }
+
+// handle results / display totalTokensOut...
 ```
 
-The `scripts/liquidate.ts` script automates this flow: it scans the wallet for unredeemed positions, filters only expired markets, and liquidates positions in those expired markets.
+The `scripts/liquidate.ts` script takes one or more market addresses (like `redeem.ts`), resolves the signer’s positions in those markets, and calls `client.liquidate` for each.
 
 ### Token approval
 

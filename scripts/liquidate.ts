@@ -1,68 +1,87 @@
 /**
- * Liquidate positions in expired markets for a wallet.
- * Usage: npx tsx scripts/liquidate.ts [wallet-address]
+ * Liquidate positions in one or more expired markets (for the signer's wallet).
+ * Usage: npx tsx scripts/liquidate.ts <market-address> [market-address ...]
  *
- * Examples:
- *   npx tsx scripts/liquidate.ts
- *   npx tsx scripts/liquidate.ts 0xabc...
+ * Example:
+ *   npx tsx scripts/liquidate.ts 0x94d829cce7e8532aef2a829489c1c1296c111990
+ *   npx tsx scripts/liquidate.ts 0xabc... 0xdef... 0x123...
  *
- * This script is intentionally scoped only to **expired** markets.
  * Use `scripts/redeem.ts` for redemptions from settled markets.
  */
-import { client, walletAddress, toUsdc } from "./client.js";
+import { client, toUsdc } from "./client.js";
 
-const wallet = (process.argv[2] ?? walletAddress) as `0x${string}`;
-
-if (!wallet) {
-  console.error("Provide a wallet address or set CDP_WALLET_ADDRESS in .env");
+const addresses = process.argv.slice(2) as `0x${string}`[];
+if (addresses.length === 0) {
+  console.error("Usage: npx tsx scripts/liquidate.ts <market-address> [market-address ...]");
   process.exit(1);
 }
 
-console.log("Wallet: " + wallet + "\n");
-
+const { address: wallet } = await client.getSigner();
 const { positions } = await client.listPositions({
   wallet,
   redeemed: false,
-  limit: 100,
+  limit: 500,
 });
 
-if (!positions || positions.length === 0) {
-  console.log("No active positions found.");
-  process.exit(0);
+const positionsInMarkets = (positions ?? []).filter((p) => addresses.includes(p.marketProxy as `0x${string}`));
+
+function outcomeIndicesFor(marketAddress: string): number[] {
+  return Array.from(
+    new Set(
+      positionsInMarkets
+        .filter((p) => p.marketProxy === marketAddress)
+        .map((p) => Number((p as { outcomeIdx?: number | string }).outcomeIdx)),
+    ),
+  );
 }
 
-const expiredMarkets = new Set<string>();
-
-for (const p of positions) {
-  const status = (p as any).marketStatus as string | undefined;
-  if (status === "expired") {
-    expiredMarkets.add(p.marketProxy);
+if (addresses.length === 1) {
+  const marketAddress = addresses[0];
+  const outcomeIndices = outcomeIndicesFor(marketAddress);
+  if (outcomeIndices.length === 0) {
+    console.error("No unredeemed positions for this market. Nothing to liquidate.");
+    process.exit(1);
   }
-}
-
-const expiredAddresses = Array.from(expiredMarkets) as `0x${string}`[];
-
-if (expiredAddresses.length === 0) {
-  console.log("No expired markets found for this wallet.");
-  process.exit(0);
-}
-
-console.log("Liquidating positions in expired markets:\n");
-
-// NOTE: This assumes the liquidation-capable SDK branch exposes a batch
-// helper similar to redeemPositions. Adjust the method name/signature here
-// if the final SDK API differs.
-const { results, totalTokensOut } = await (client as any).liquidatePositions({
-  marketAddresses: expiredAddresses,
-});
-
-for (const r of results) {
-  if (r.success) {
-    console.log("OK  " + r.marketAddress + " -> " + toUsdc(r.tokensOut!));
-  } else {
-    console.log("ERR " + r.marketAddress + " -> " + r.error);
+  const { transactionHash, sharesIn, totalTokensOut } = await client.liquidate({
+    marketAddress,
+    outcomeIndices,
+  });
+  console.log("Liquidated: " + marketAddress);
+  console.log("Shares burned: " + (Number(sharesIn) / 1e18).toFixed(4));
+  console.log("Tokens out:    " + toUsdc(totalTokensOut));
+  console.log("Transaction:   " + transactionHash);
+} else {
+  const results: { marketAddress: `0x${string}`; success: boolean; tokensOut?: bigint; error?: string }[] = [];
+  let totalTokensOut = 0n;
+  for (const marketAddress of addresses) {
+    const outcomeIndices = outcomeIndicesFor(marketAddress);
+    if (outcomeIndices.length === 0) {
+      results.push({ marketAddress, success: false, error: "No positions for this market" });
+      continue;
+    }
+    try {
+      const { totalTokensOut: tokensOut } = await client.liquidate({
+        marketAddress,
+        outcomeIndices,
+      });
+      results.push({ marketAddress, success: true, tokensOut });
+      totalTokensOut += tokensOut;
+    } catch (e: unknown) {
+      const err = e as { shortMessage?: string; message?: string };
+      results.push({
+        marketAddress,
+        success: false,
+        error: err.shortMessage ?? err.message ?? "Unknown error",
+      });
+    }
   }
+  for (const r of results) {
+    if (r.success) {
+      console.log("OK  " + r.marketAddress + " -> " + toUsdc(r.tokensOut!));
+    } else {
+      console.log("ERR " + r.marketAddress + " -> " + r.error);
+    }
+  }
+  console.log("\nTotal recovered: " + toUsdc(totalTokensOut));
 }
-
-console.log("\nTotal recovered from expired markets: " + toUsdc(totalTokensOut));
 
