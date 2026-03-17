@@ -343,6 +343,8 @@ const customBalance = await client.getErc20Balance("0x..." as `0x${string}`);
 
 > **Tip**: See `scripts/list-positions.ts` for a complete working example.
 
+> **Important**: Positions with `shares` equal to `0` (i.e. `BigInt(p.shares) === 0n`) represent fully exited stakes. These cannot be redeemed or liquidated since the wallet holds no shares. Always filter out zero-share positions before attempting redeem or liquidate operations.
+
 ```typescript
 const { positions } = await client.listPositions({
   wallet: "0x...",
@@ -352,6 +354,7 @@ const { positions } = await client.listPositions({
 
 for (const p of positions ?? []) {
   const shares = Number(BigInt(p.shares)) / 1e18;
+  if (shares === 0) continue; // no stake — skip
   const marketStatus = (p as any).marketStatus ?? "unknown";
   console.log(`Market ${p.marketProxy} | Status ${marketStatus} | Outcome ${p.outcomeIdx} | ${shares} shares`);
 }
@@ -369,6 +372,8 @@ const { trades } = await client.listTrades({
 ### Redeem settled positions
 
 > **Tip**: See `scripts/redeem.ts` for a complete working example.
+
+> **Important**: Only positions with non-zero shares can be redeemed. If `listPositions` returns a position with `shares === "0"`, the wallet has no stake in that market and calling `redeemMarket` will fail or return nothing. Always check shares > 0 before redeeming.
 
 ```typescript
 // Single market
@@ -388,7 +393,9 @@ for (const r of results) {
 
 ### Liquidate expired markets (portfolio recovery for unredeemable markets)
 
-Use this pattern when the user wants to recover what they can from **expired** markets they participated in:
+Use this pattern when the user wants to recover what they can from **expired** markets they participated in.
+
+> **Important**: Only positions with non-zero shares can be liquidated. Positions where `shares === "0"` mean the wallet has fully exited and holds no stake — attempting to liquidate them will fail. Always filter out zero-share positions before calling `liquidate`.
 
 ```typescript
 const wallet = "0x..." as `0x${string}`;

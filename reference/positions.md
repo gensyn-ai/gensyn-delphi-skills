@@ -87,6 +87,8 @@ for (const t of trades ?? []) {
 
 Markets must be `settled` (winner submitted) before redeeming. Only holders of the **winning** outcome receive tokens.
 
+> **Important**: Positions with `shares === "0"` cannot be redeemed or liquidated — the wallet holds no stake. The positions API may return zero-share entries for markets the wallet previously participated in but fully exited. Always check `BigInt(position.shares) > 0n` before attempting redeem or liquidate calls.
+
 ### redeemMarket — single market
 
 ```typescript
@@ -119,9 +121,10 @@ console.log(`Total redeemed: ${Number(totalTokensOut) / 1e6} USDC`);
 // 1. Get all active positions
 const { positions } = await client.listPositions({ wallet: myAddress, redeemed: false });
 
-// 2. Find which ones are in settled markets
+// 2. Find which ones are in settled markets (skip zero-share positions)
 const settledProxies: `0x${string}`[] = [];
 for (const p of positions ?? []) {
+  if (BigInt(p.shares) === 0n) continue; // no stake — cannot redeem
   const market = await client.getMarket({ id: p.marketProxy }); // or use id if available
   if (market.status === "settled") {
     settledProxies.push(p.marketProxy as `0x${string}`);
