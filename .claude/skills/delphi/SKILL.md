@@ -67,58 +67,50 @@ Before running any script in `scripts/`, ensure the runtime is prepared.
 
 ## Environment variables
 
-Only two things are **mandatory**: your API key and wallet signing credentials. Everything else has sensible defaults. Make sure to ask the user to set these if they are not available.
+Only two things are **mandatory**: your API key and wallet signing credentials. Everything else has sensible defaults. The SDK defaults to `testnet` if `DELPHI_NETWORK` is not set.
 
-**Before setting up environment variables, always ask the user:**
-1. "Do you want to use testnet or mainnet?" - Set `DELPHI_NETWORK` accordingly.
-2. Ask for their API key and wallet signing credentials.
+**Agent instructions for missing env vars:**
 
-**Important**: All scripts use `dotenv/config` to automatically load environment variables from a `.env` file in the project root. When setting environment variables:
+When required environment variables are not set, do NOT ask the user for their values in chat. Instead:
 
-1. **Preferred**: Create or update a `.env` file in the project root with the required variables. The scripts will automatically load them.
-2. **Alternative**: Export variables in the shell session using `export VARIABLE_NAME="value"` before running scripts.
-3. **Avoid**: Do not pass environment variables inline with commands (e.g., `VAR="value" command`) as this exposes secrets in command history and is less maintainable.
+1. Tell the user which variables are needed (list them below).
+2. Tell them where to get each value.
+3. Ask them to create a `.env` file in the project root themselves with those values.
+4. Wait for them to confirm the file is created before proceeding.
+5. **NEVER read the `.env` file** — treat it as a secret store the agent must not access.
+6. Only as a **last resort** (if the user explicitly asks you to create the file for them after already being prompted): offer to write the `.env` file using values they paste directly into chat.
 
-Example `.env` file:
-```env
-DELPHI_NETWORK=testnet
-DELPHI_API_ACCESS_KEY=your-api-key
-CDP_API_KEY_ID=your-cdp-key-id
-CDP_API_KEY_SECRET=your-cdp-secret
-CDP_WALLET_SECRET=your-wallet-secret
-CDP_WALLET_ADDRESS=0x...
-```
+**Mandatory variables to communicate to the user:**
 
-### Mandatory
+| Variable | Where to get it |
+|----------|----------------|
+| `DELPHI_API_ACCESS_KEY` | Generate at https://delphi-api.gensyn.ai |
 
-| Variable | Description |
-|----------|-------------|
-| `DELPHI_API_ACCESS_KEY` | API key — required for all REST calls |
-
-**Plus one of these signing options:**
+**Plus one of these signing options (tell the user to pick one):**
 
 **Option A — Private key (simpler)**
 | Variable | Description |
 |----------|-------------|
-| `WALLET_PRIVATE_KEY` | `0x`-prefixed hex private key |
+| `DELPHI_SIGNER_TYPE` | Set to `private_key` |
+| `WALLET_PRIVATE_KEY` | `0x`-prefixed hex private key for their wallet |
 
-Set `DELPHI_SIGNER_TYPE=private_key` (or pass `signerType: "private_key"` in config).
+**Option B — Coinbase CDP Server Wallet (default signer, no `DELPHI_SIGNER_TYPE` needed)**
+| Variable | Where to get it |
+|----------|----------------|
+| `CDP_API_KEY_ID` | Coinbase CDP portal (https://portal.cdp.coinbase.com) |
+| `CDP_API_KEY_SECRET` | Coinbase CDP portal |
+| `CDP_WALLET_SECRET` | Coinbase CDP portal |
+| `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) |
 
-**Option B — Coinbase CDP Server Wallet (default signer)**
-| Variable | Description |
-|----------|-------------|
-| `CDP_API_KEY_ID` | Coinbase CDP API key ID |
-| `CDP_API_KEY_SECRET` | Coinbase CDP API key secret |
-| `CDP_WALLET_SECRET` | CDP wallet encryption secret |
-| `CDP_WALLET_ADDRESS` | CDP wallet address (`0x`-prefixed) |
+**Important**: All scripts use `dotenv/config` to automatically load environment variables from a `.env` file in the project root.
 
 ### Network selection
-
-**Important**: Always ask the user whether they want to use testnet or mainnet before setting up environment variables. Set `DELPHI_NETWORK` accordingly.
 
 | Variable | Values | Default |
 |----------|--------|---------|
 | `DELPHI_NETWORK` | `"testnet"` \| `"mainnet"` | `"testnet"` |
+
+The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the user explicitly wants mainnet.
 
 When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public`
@@ -127,8 +119,6 @@ When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - API URL: `https://delphi-agentic-trading-api.gensyn-staging.ai/`
 
 When `DELPHI_NETWORK=mainnet`, mainnet defaults are used instead.
-
-**Agent instructions**: Before setting up environment variables, explicitly ask the user: "Do you want to use testnet or mainnet?" Then set `DELPHI_NETWORK` in the `.env` file (or export it) based on their response.
 
 ### Optional overrides
 

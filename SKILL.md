@@ -19,9 +19,7 @@ Dynamic parimutuel markets are betting or prediction systems where prices (odds)
 - User wants to buy or sell outcome shares
 - User wants to check their portfolio, positions, or trade history
 - User wants to redeem winnings from a resolved market
-- User wants to recover funds from expired markets they participated in (liquidations)
 - User wants to check or set token approval for trading
-- User wants to see wallet balances (ETH, USDC, or other ERC-20) for the configured signer
 - Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -47,8 +45,6 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/list-positions.ts` | List wallet positions | `npx tsx scripts/list-positions.ts [wallet-address]` |
 | `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address>` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount]` |
-| `scripts/liquidate.ts` | Liquidate positions in expired markets | `npx tsx scripts/liquidate.ts <market-address> [market-address ...]` |
-| `scripts/get-wallet-balances.ts` | Get ETH and ERC-20 (e.g. USDC) balances for signer | `npx tsx scripts/get-wallet-balances.ts` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -67,58 +63,48 @@ Before running any script in `scripts/`, ensure the runtime is prepared.
 
 ## Environment variables
 
-Only two things are **mandatory**: your API key and wallet signing credentials. Everything else has sensible defaults. Make sure to ask the user to set these if they are not available.
+Only two things are **mandatory**: your API key and wallet signing credentials. Everything else has sensible defaults. The SDK defaults to `testnet` if `DELPHI_NETWORK` is not set.
 
-**Before setting up environment variables, always ask the user:**
-1. "Do you want to use testnet or mainnet?" - Set `DELPHI_NETWORK` accordingly.
-2. Ask for their API key and wallet signing credentials.
+**Agent instructions for missing env vars:**
 
-**Important**: All scripts use `dotenv/config` to automatically load environment variables from a `.env` file in the project root. When setting environment variables:
+When required environment variables are not set, do NOT ask the user for their values in chat. Instead:
 
-1. **Preferred**: Create or update a `.env` file in the project root with the required variables. The scripts will automatically load them.
-2. **Alternative**: Export variables in the shell session using `export VARIABLE_NAME="value"` before running scripts.
-3. **Avoid**: Do not pass environment variables inline with commands (e.g., `VAR="value" command`) as this exposes secrets in command history and is less maintainable.
+1. Tell the user which variables are needed (list them below).
+2. Tell them where to get each value.
+3. Ask them to create a `.env` file in the project root themselves with those values.
+4. Wait for them to confirm the file is created before proceeding.
+5. **NEVER read the `.env` file** — treat it as a secret store the agent must not access.
+6. Only as a **last resort** (if the user explicitly asks you to create the file for them after already being prompted): offer to write the `.env` file using values they paste directly into chat.
 
-Example `.env` file:
-```env
-DELPHI_NETWORK=testnet
-DELPHI_API_ACCESS_KEY=your-api-key
-CDP_API_KEY_ID=your-cdp-key-id
-CDP_API_KEY_SECRET=your-cdp-secret
-CDP_WALLET_SECRET=your-wallet-secret
-CDP_WALLET_ADDRESS=0x...
-```
+**Mandatory variables to communicate to the user:**
 
-### Mandatory
+| Variable | Where to get it |
+|----------|----------------|
+| `DELPHI_API_ACCESS_KEY` | Generate at https://delphi-api.gensyn.ai |
 
-| Variable | Description |
-|----------|-------------|
-| `DELPHI_API_ACCESS_KEY` | API key — required for all REST calls |
-
-**Plus one of these signing options:**
+**Plus one of these signing options (tell the user to pick one):**
 
 **Option A — Private key (simpler)**
 | Variable | Description |
 |----------|-------------|
-| `WALLET_PRIVATE_KEY` | `0x`-prefixed hex private key |
+| `DELPHI_SIGNER_TYPE` | Set to `private_key` |
+| `WALLET_PRIVATE_KEY` | `0x`-prefixed hex private key for their wallet |
 
-Set `DELPHI_SIGNER_TYPE=private_key` (or pass `signerType: "private_key"` in config).
-
-**Option B — Coinbase CDP Server Wallet (default signer)**
-| Variable | Description |
-|----------|-------------|
-| `CDP_API_KEY_ID` | Coinbase CDP API key ID |
-| `CDP_API_KEY_SECRET` | Coinbase CDP API key secret |
-| `CDP_WALLET_SECRET` | CDP wallet encryption secret |
-| `CDP_WALLET_ADDRESS` | CDP wallet address (`0x`-prefixed) |
+**Option B — Coinbase CDP Server Wallet (default signer, no `DELPHI_SIGNER_TYPE` needed)**
+| Variable | Where to get it |
+|----------|----------------|
+| `CDP_API_KEY_ID` | Coinbase CDP portal (https://portal.cdp.coinbase.com) |
+| `CDP_API_KEY_SECRET` | Coinbase CDP portal |
+| `CDP_WALLET_SECRET` | Coinbase CDP portal |
+| `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) |
 
 ### Network selection
-
-**Important**: Always ask the user whether they want to use testnet or mainnet before setting up environment variables. Set `DELPHI_NETWORK` accordingly.
 
 | Variable | Values | Default |
 |----------|--------|---------|
 | `DELPHI_NETWORK` | `"testnet"` \| `"mainnet"` | `"testnet"` |
+
+The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the user explicitly wants mainnet.
 
 When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public`
@@ -127,8 +113,6 @@ When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - API URL: `https://delphi-agentic-trading-api.gensyn-staging.ai/`
 
 When `DELPHI_NETWORK=mainnet`, mainnet defaults are used instead.
-
-**Agent instructions**: Before setting up environment variables, explicitly ask the user: "Do you want to use testnet or mainnet?" Then set `DELPHI_NETWORK` in the `.env` file (or export it) based on their response.
 
 ### Optional overrides
 
@@ -139,7 +123,6 @@ These override the network defaults if you need to point at a custom endpoint:
 | `GENSYN_RPC_URL` | Custom RPC endpoint |
 | `GENSYN_CHAIN_ID` | Custom chain ID |
 | `DELPHI_GATEWAY_CONTRACT` | Custom gateway contract address |
-| `DELPHI_TOKEN_ADDRESS` | Custom collateral token address (defaults per network if unset) |
 | `DELPHI_API_BASE_URL` | Custom API base URL |
 | `DELPHI_SIGNER_TYPE` | `"private_key"` or `"cdp_server_wallet"` (default) |
 | `CF_ACCESS_ID` | Cloudflare Access client ID |
@@ -319,26 +302,6 @@ const { transactionHash } = await client.sellShares({
 });
 ```
 
-### Get wallet balances
-
-The SDK exposes read-only balance methods for the configured signer wallet. The collateral token address defaults to the network default (or `DELPHI_TOKEN_ADDRESS` if set); you can omit it when calling the balance methods.
-
-```typescript
-// Native ETH balance
-const ethBalance: bigint = await client.getEthBalance();
-const ethFormatted = (Number(ethBalance) / 1e18).toFixed(6) + " ETH";
-
-// ERC-20 balance using default token (network / DELPHI_TOKEN_ADDRESS)
-const rawBalance: bigint = await client.getErc20Balance();
-const { balance, decimals } = await client.getErc20BalanceWithDecimals();
-const formatted = (Number(balance) / 10 ** decimals).toFixed(decimals > 6 ? 6 : decimals);
-
-// Optional: use a specific token address
-const customBalance = await client.getErc20Balance("0x..." as `0x${string}`);
-```
-
-> **Tip**: See `scripts/get-wallet-balances.ts` for a complete working example.
-
 ### List positions
 
 > **Tip**: See `scripts/list-positions.ts` for a complete working example.
@@ -355,8 +318,7 @@ const { positions } = await client.listPositions({
 for (const p of positions ?? []) {
   const shares = Number(BigInt(p.shares)) / 1e18;
   if (shares === 0) continue; // no stake — skip
-  const marketStatus = (p as any).marketStatus ?? "unknown";
-  console.log(`Market ${p.marketProxy} | Status ${marketStatus} | Outcome ${p.outcomeIdx} | ${shares} shares`);
+  console.log(`Market ${p.marketProxy} | Outcome ${p.outcomeIdx} | ${shares} shares`);
 }
 ```
 
@@ -390,67 +352,6 @@ for (const r of results) {
   else console.error(`Failed ${r.marketAddress}: ${r.error}`);
 }
 ```
-
-### Liquidate expired markets (portfolio recovery for unredeemable markets)
-
-Use this pattern when the user wants to recover what they can from **expired** markets they participated in.
-
-> **Important**: Only positions with non-zero shares can be liquidated. Positions where `shares === "0"` mean the wallet has fully exited and holds no stake — attempting to liquidate them will fail. Always filter out zero-share positions before calling `liquidate`.
-
-```typescript
-const wallet = "0x..." as `0x${string}`;
-const { positions } = await client.listPositions({ wallet, redeemed: false, limit: 100 });
-
-type LiquidationResult = {
-  marketAddress: `0x${string}`;
-  success: boolean;
-  tokensOut?: bigint;
-  error?: string;
-};
-
-const expiredMarkets = new Set<string>();
-
-for (const p of positions ?? []) {
-  const status = (p as any).marketStatus;
-  if (status === "expired") expiredMarkets.add(p.marketProxy);
-}
-
-const expired = Array.from(expiredMarkets) as `0x${string}`[];
-
-const results: LiquidationResult[] = [];
-let totalTokensOut = 0n;
-
-for (const marketAddress of expired) {
-  const outcomeIndices = Array.from(
-    new Set(
-      (positions ?? [])
-        .filter((p) => p.marketProxy === marketAddress)
-        .map((p) => Number((p as any).outcomeIdx)),
-    ),
-  );
-
-  if (outcomeIndices.length === 0) continue;
-
-  try {
-    const { totalTokensOut: tokensOut } = await client.liquidate({
-      marketAddress,
-      outcomeIndices,
-    });
-    results.push({ marketAddress, success: true, tokensOut });
-    totalTokensOut += tokensOut;
-  } catch (e: any) {
-    results.push({
-      marketAddress,
-      success: false,
-      error: e.shortMessage ?? e.message ?? "Unknown error",
-    });
-  }
-}
-
-// handle results / display totalTokensOut...
-```
-
-The `scripts/liquidate.ts` script takes one or more market addresses (like `redeem.ts`), resolves the signer’s positions in those markets, and calls `client.liquidate` for each.
 
 ### Token approval
 
