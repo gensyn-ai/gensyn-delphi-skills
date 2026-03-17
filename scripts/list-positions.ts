@@ -1,17 +1,17 @@
 /**
  * List active (unredeemed) positions for a wallet.
  * Usage: npx tsx scripts/list-positions.ts [wallet-address]
- *   Defaults to CDP_WALLET_ADDRESS from .env
+ *   Defaults to the configured signer's address.
  *
  * Example:
  *   npx tsx scripts/list-positions.ts
  *   npx tsx scripts/list-positions.ts 0xabc...
  */
-import { client, walletAddress } from "./client.js";
+import { client, getWalletAddress } from "./client.js";
 
-const wallet = (process.argv[2] ?? walletAddress) as `0x${string}`;
+const wallet = (process.argv[2] ?? await getWalletAddress()) as `0x${string}`;
 if (!wallet) {
-  console.error("Provide a wallet address or set CDP_WALLET_ADDRESS in .env");
+  console.error("Provide a wallet address or configure a signer in .env");
   process.exit(1);
 }
 

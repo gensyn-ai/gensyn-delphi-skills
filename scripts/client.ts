@@ -8,7 +8,10 @@ export const client = new DelphiClient({
   },
 });
 
-export const walletAddress = process.env.CDP_WALLET_ADDRESS as `0x${string}`;
+export async function getWalletAddress(): Promise<`0x${string}`> {
+  const { address } = await client.getSigner();
+  return address;
+}
 export const gatewayAddress = (process.env.DELPHI_GATEWAY_CONTRACT ?? "0x469388CD2498b43925f562FaA333D95135b66c06") as `0x${string}`;
 export const rpcUrl = process.env.GENSYN_RPC_URL ?? "https://gensyn-testnet.g.alchemy.com/public";
 export const chainId = Number(process.env.GENSYN_CHAIN_ID ?? 685685);

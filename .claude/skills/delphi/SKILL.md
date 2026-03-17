@@ -8,6 +8,10 @@ compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_A
 
 Gensyn Delphi is a dynamic parimutuel prediction market on Gensyn. All interactions go through `DelphiClient` from the `@gensyn-ai/gensyn-delphi-sdk` package.
 
+## How dynamic parimutuel markets work
+
+Dynamic parimutuel markets are betting or prediction systems where prices (odds) emerge endogenously from the distribution of all participants' wagers rather than being set by a market maker. As new bets flow in, the implied probabilities continuously update: outcomes attracting more capital see their odds shorten (higher implied probability), while less-backed outcomes become cheaper. Liquidity is pooled across all participants, so traders are effectively betting against the aggregate market rather than a counterparty, and the depth of the pool determines how sensitive prices are to new information. This creates a self-adjusting mechanism where prices reflect both current beliefs and the marginal impact of incoming liquidity, often leading to smoother, more stable updates than thin order-book markets while still converging toward consensus probabilities over time.
+
 ## When to use this skill
 
 - User wants to list, search, or browse prediction markets
