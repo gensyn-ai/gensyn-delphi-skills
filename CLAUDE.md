@@ -93,10 +93,10 @@ When required environment variables are not set, do NOT ask the user for their v
 **Option B — Coinbase CDP Server Wallet (default signer, no `DELPHI_SIGNER_TYPE` needed)**
 | Variable | Where to get it |
 |----------|----------------|
-| `CDP_API_KEY_ID` | Coinbase CDP portal (https://portal.cdp.coinbase.com) |
-| `CDP_API_KEY_SECRET` | Coinbase CDP portal |
-| `CDP_WALLET_SECRET` | Coinbase CDP portal |
-| `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) |
+| `CDP_API_KEY_ID` | Server Wallet v2 Quickstart (https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
+| `CDP_API_KEY_SECRET` | Server Wallet v2 Quickstart (https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
+| `CDP_WALLET_SECRET` | Server Wallet v2 Quickstart (https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
+| `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) (see https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
 
 Private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the CDP TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
 
