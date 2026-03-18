@@ -100,6 +100,8 @@ When required environment variables are not set, do NOT ask the user for their v
 
 Private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the CDP TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
 
+To execute Delphi transactions, your signer wallet must have `ETH` (for gas) and `USDC` on the Gensyn chain.
+
 ### Network selection
 
 | Variable | Values | Default |
