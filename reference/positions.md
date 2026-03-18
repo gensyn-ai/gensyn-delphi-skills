@@ -13,7 +13,7 @@ const client = new DelphiClient();
 ```typescript
 const { positions } = await client.listPositions({
   wallet: "0x...",     // required
-  redeemed: false,     // optional: filter by redemption status
+  redeemedOrLiquidated: false,     // optional: filter by redemption/liquidation status
   limit: 50,
   skip: 0,
 });
@@ -28,7 +28,7 @@ interface Position {
   wallet: string;
   outcomeIdx: string;       // Outcome index as string — parse with parseInt()
   shares: string;           // 18-decimal bigint as string — parse with BigInt()
-  redeemed: boolean;
+  redeemedOrLiquidated: boolean;
   tokensRedeemed: string;   // 6-decimal bigint as string — parse with BigInt()
   // Current market status (API returns the string value, contract returns the int enum):
   // 0 -> "open", 1 -> "awaiting_settlement", 2 -> "settled", 3 -> "expired"
@@ -119,7 +119,7 @@ console.log(`Total redeemed: ${Number(totalTokensOut) / 1e6} USDC`);
 
 ```typescript
 // 1. Get all active positions
-const { positions } = await client.listPositions({ wallet: myAddress, redeemed: false });
+const { positions } = await client.listPositions({ wallet: myAddress, redeemedOrLiquidated: false });
 
 // 2. Find which ones are in settled markets (skip zero-share positions)
 const settledProxies: `0x${string}`[] = [];
@@ -144,7 +144,7 @@ if (settledProxies.length > 0) {
 Estimate the current liquidation value of all active positions:
 
 ```typescript
-const { positions } = await client.listPositions({ wallet: myAddress, redeemed: false });
+const { positions } = await client.listPositions({ wallet: myAddress, redeemedOrLiquidated: false });
 
 let totalValue = 0;
 for (const p of positions ?? []) {

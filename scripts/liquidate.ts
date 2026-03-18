@@ -19,7 +19,7 @@ if (addresses.length === 0) {
 const { address: wallet } = await client.getSigner();
 const { positions } = await client.listPositions({
   wallet,
-  redeemed: false,
+  redeemedOrLiquidated: false,
   limit: 500,
 });
 

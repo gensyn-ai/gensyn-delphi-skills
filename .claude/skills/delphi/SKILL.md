@@ -338,7 +338,7 @@ const customBalance = await client.getErc20Balance("0x..." as `0x${string}`);
 ```typescript
 const { positions } = await client.listPositions({
   wallet: "0x...",
-  redeemed: false,  // only active positions
+  redeemedOrLiquidated: false,  // only active positions
   limit: 50,
 });
 
@@ -389,7 +389,7 @@ Use this pattern when the user wants to recover what they can from **expired** m
 
 ```typescript
 const wallet = "0x..." as `0x${string}`;
-const { positions } = await client.listPositions({ wallet, redeemed: false, limit: 100 });
+const { positions } = await client.listPositions({ wallet, redeemedOrLiquidated: false, limit: 100 });
 
 const expired: `0x${string}`[] = [];
 

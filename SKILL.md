@@ -311,7 +311,7 @@ const { transactionHash } = await client.sellShares({
 ```typescript
 const { positions } = await client.listPositions({
   wallet: "0x...",
-  redeemed: false,  // only active positions
+  redeemedOrLiquidated: false,  // only active positions
   limit: 50,
 });
 

@@ -16,7 +16,7 @@ if (!wallet) {
 }
 
 console.log("Wallet: " + wallet + "\n");
-const { positions } = await client.listPositions({ wallet, redeemed: false, limit: 50 });
+const { positions } = await client.listPositions({ wallet, redeemedOrLiquidated: false, limit: 50 });
 
 if (!positions || positions.length === 0) {
   console.log("No active positions found.");
