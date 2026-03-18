@@ -84,7 +84,7 @@ When required environment variables are not set, do NOT ask the user for their v
 
 **Plus one of these signing options (tell the user to pick one):**
 
-**Option A — Private key (simpler)**
+**Option A — Private key**
 | Variable | Description |
 |----------|-------------|
 | `DELPHI_SIGNER_TYPE` | Set to `private_key` |
@@ -97,6 +97,8 @@ When required environment variables are not set, do NOT ask the user for their v
 | `CDP_API_KEY_SECRET` | Coinbase CDP portal |
 | `CDP_WALLET_SECRET` | Coinbase CDP portal |
 | `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) |
+
+Private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the CDP TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
 
 ### Network selection
 
