@@ -19,6 +19,7 @@ Dynamic parimutuel markets are betting or prediction systems where prices (odds)
 - User wants to buy or sell outcome shares
 - User wants to check their portfolio, positions, or trade history
 - User wants to redeem winnings from a resolved market
+- If the user asks you to create a market, remind them that markets not created on the UI will not show up on the UI
 - User wants to check or set token approval for trading
 - Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
 

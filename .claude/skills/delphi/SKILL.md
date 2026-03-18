@@ -19,6 +19,7 @@ Dynamic parimutuel markets are betting or prediction systems where prices (odds)
 - User wants to buy or sell outcome shares
 - User wants to check their portfolio, positions, or trade history
 - User wants to redeem winnings from a resolved market
+- If the user asks you to create a market, remind them that markets not created on the UI will not show up on the UI
 - User wants to recover funds from expired markets they participated in (liquidations)
 - User wants to check or set token approval for trading
 - User wants to see wallet balances (ETH, USDC, or other ERC-20) for the configured signer
