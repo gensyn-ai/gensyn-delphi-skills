@@ -20,7 +20,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk#sr-pr-liquidations",
+    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk-private#sr-pr-liquidations",
     "dotenv": "^16.4.0",
     "viem": "^2.21.0"
   }
