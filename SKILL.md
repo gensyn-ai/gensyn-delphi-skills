@@ -99,9 +99,10 @@ When required environment variables are not set, do NOT ask the user for their v
 | `CDP_WALLET_SECRET` | Server Wallet v2 Quickstart (https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
 | `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) (see https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
 
-Private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the CDP TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
+Make sure to also convey the following 2 points to the user -
+- For the CDP option, private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
 
-To execute Delphi transactions, your signer wallet must have `ETH` (for gas) and `USDC` on the Gensyn chain.
+- To execute Delphi transactions, your signer wallet must have `ETH` (for gas) and `USDC` on the Gensyn chain.
 
 ### Network selection
 

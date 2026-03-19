@@ -1,6 +1,6 @@
 ---
 name: delphi
-description: "Gensyn Delphi prediction market platform. List and filter markets, fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, redeem winnings from settled markets, and manage ERC-20 token allowances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, or managing positions."
+description: "Helps agents access and trade on Gensyn Delphi prediction markets. List and filter markets, fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, redeem winnings from settled markets, and manage ERC-20 token allowances. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, or managing positions."
 compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_API_ACCESS_KEY and wallet signing credentials are mandatory. Network defaults (RPC URL, chain ID, gateway contract, API URL) are set automatically based on DELPHI_NETWORK (default: testnet)."
 ---
 
@@ -103,7 +103,7 @@ When required environment variables are not set, do NOT ask the user for their v
 | `CDP_WALLET_SECRET` | Server Wallet v2 Quickstart (https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
 | `CDP_WALLET_ADDRESS` | Their CDP wallet address (`0x`-prefixed) (see https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) |
 
-Private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the CDP TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
+For the CDP option, private keys are secured in Coinbase's Trusted Execution Environment (TEE) and never leave the TEE. See [Server Wallet v2 docs](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/welcome) for details.
 
 To execute Delphi transactions, your signer wallet must have `ETH` (for gas) and `USDC` on the Gensyn chain.
 
