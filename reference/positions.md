@@ -43,46 +43,6 @@ const tokensRedeemed = Number(BigInt(position.tokensRedeemed)) / 1e6;
 const outcomeIdx = parseInt(position.outcomeIdx);
 ```
 
-## Trades
-
-### listTrades
-
-```typescript
-const { trades } = await client.listTrades({
-  trader: "0x...",          // filter by trader wallet
-  marketProxy: "0x...",     // filter by market
-  marketEOA: "0x...",       // filter by market EOA
-  limit: 50,
-  skip: 0,
-});
-```
-
-### Trade type
-
-```typescript
-interface Trade {
-  marketId: string;
-  marketProxy: string;
-  marketEOA: string;
-  trader: string;
-  outcomeIdx: string;     // parse with parseInt()
-  isBuy: boolean;
-  sharesDelta: string;    // 18-decimal bigint as string (always positive)
-  tokensDelta: string;    // 6-decimal bigint as string (always positive)
-  timestamp: string;      // ISO timestamp
-  unixTs: string;         // Unix timestamp as string
-}
-```
-
-```typescript
-for (const t of trades ?? []) {
-  const direction = t.isBuy ? "BUY" : "SELL";
-  const shares = Number(BigInt(t.sharesDelta)) / 1e18;
-  const tokens = Number(BigInt(t.tokensDelta)) / 1e6;
-  console.log(`${direction} ${shares.toFixed(4)} shares @ ${(tokens / shares).toFixed(4)} USDC/share`);
-}
-```
-
 ## Redemption
 
 Markets must be `settled` (winner submitted) before redeeming. Only holders of the **winning** outcome receive tokens.

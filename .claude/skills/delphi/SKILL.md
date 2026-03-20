@@ -355,15 +355,6 @@ for (const p of positions ?? []) {
 }
 ```
 
-### List trades
-
-```typescript
-const { trades } = await client.listTrades({
-  trader: "0x...",
-  limit: 50,
-});
-```
-
 ### Redeem settled positions
 
 > **Tip**: See `scripts/redeem.ts` for a complete working example.
