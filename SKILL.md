@@ -1,6 +1,6 @@
 ---
 name: delphi
-description: "Gensyn Delphi prediction market platform. List and filter markets, fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, redeem winnings from settled markets, and manage ERC-20 token allowances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, or managing positions."
+description: "Gensyn Delphi prediction market platform. List and filter markets, fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, winner submissions), redeem winnings from settled markets, and manage ERC-20 token allowances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, querying historical on-chain data, or managing positions."
 compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_API_ACCESS_KEY and wallet signing credentials are mandatory. Network defaults (RPC URL, chain ID, gateway contract, API URL) are set automatically based on DELPHI_NETWORK (default: testnet)."
 ---
 
@@ -21,6 +21,8 @@ Dynamic parimutuel markets are betting or prediction systems where prices (odds)
 - User wants to redeem winnings from a resolved market
 - If the user asks you to create a market, remind them that markets not created on the UI will not show up on the UI
 - User wants to check or set token approval for trading
+- User wants to query historical on-chain trade data (buys, sells, redemptions, liquidations)
+- User wants recent trades for a market or wallet via the Goldsky subgraph
 - Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -46,6 +48,7 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/list-positions.ts` | List wallet positions | `npx tsx scripts/list-positions.ts [wallet-address]` |
 | `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address>` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount]` |
+| `scripts/list-recent-trades.ts` | List recent trades via subgraph | `npx tsx scripts/list-recent-trades.ts <market-proxy-address> [limit]` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -130,6 +133,7 @@ These override the network defaults if you need to point at a custom endpoint:
 | `GENSYN_CHAIN_ID` | Custom chain ID |
 | `DELPHI_GATEWAY_CONTRACT` | Custom gateway contract address |
 | `DELPHI_API_BASE_URL` | Custom API base URL |
+| `DELPHI_SUBGRAPH_URL` | Custom Goldsky subgraph endpoint |
 | `DELPHI_SIGNER_TYPE` | `"private_key"` or `"cdp_server_wallet"` (default) |
 | `CF_ACCESS_ID` | Cloudflare Access client ID |
 | `CF_ACCESS_SECRET` | Cloudflare Access client secret |
@@ -371,6 +375,38 @@ const { approvalNeeded } = await client.ensureTokenApproval({
 });
 ```
 
+### Query recent trades via subgraph
+
+> **Tip**: See `scripts/list-recent-trades.ts` for a complete working example.
+
+The SDK's `SubgraphClient` queries on-chain event data indexed by a Goldsky subgraph. Access it via `client.getSubgraph()`.
+
+```typescript
+const subgraph = client.getSubgraph();
+
+// Convenience method: get buys and sells for a market
+const { buys, sells } = await subgraph.getMarketTrades(
+  "0x..." as string,  // market proxy address
+  { first: 20 }
+);
+
+for (const buy of buys) {
+  const cost = Number(BigInt(buy.tokensIn ?? "0")) / 1e6;
+  const shares = Number(BigInt(buy.sharesOut ?? "0")) / 1e18;
+  const time = new Date(Number(buy.timestamp_) * 1000).toLocaleString();
+  console.log(`BUY ${time} | ${cost.toFixed(4)} USDC → ${shares.toFixed(4)} shares`);
+}
+
+// Arbitrary GraphQL: recent buys across all markets
+const data = await subgraph.query<{ gatewayBuys: SubgraphBuy[] }>(`{
+  gatewayBuys(first: 5, orderBy: timestamp_, orderDirection: desc) {
+    id buyer marketProxy tokensIn sharesOut timestamp_
+  }
+}`);
+```
+
+Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewayLiquidations`, `gatewayWinnerSubmitteds`. All support filtering (`where`), ordering (`orderBy` + `orderDirection`), and pagination (`first` + `skip`).
+
 ## Error handling
 
 | Error | Cause | Fix |
@@ -392,3 +428,4 @@ const { approvalNeeded } = await client.ensureTokenApproval({
 | [reference/trading.md](reference/trading.md) | Trading mechanics, slippage formulas, parimutuel pricing explainer |
 | [reference/positions.md](reference/positions.md) | `Position`/`Trade` type schemas, batch redemption patterns, portfolio estimation |
 | [reference/onchain.md](reference/onchain.md) | Full Gateway ABI function list, direct `viem` read patterns, signing config |
+| [reference/subgraph.md](reference/subgraph.md) | Goldsky subgraph GraphQL schema, `SubgraphClient` API, entity types, filtering, raw query examples |
