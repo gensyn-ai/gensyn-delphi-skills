@@ -84,7 +84,7 @@ When required environment variables are not set, do NOT ask the user for their v
 
 | Variable | Where to get it |
 |----------|----------------|
-| `DELPHI_API_ACCESS_KEY` | Generate at https://delphi-api.gensyn.ai |
+| `DELPHI_API_ACCESS_KEY` | **Testnet:** Generate at https://delphi-api-access-app.pages.dev/ · **Mainnet:** Generate at <MOCKED_API_GEN_LINK> |
 
 **Plus one of these signing options (tell the user to pick one):**
 
