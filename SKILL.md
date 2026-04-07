@@ -1,6 +1,6 @@
 ---
 name: delphi
-description: "Gensyn Delphi prediction market platform. List and filter markets, fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, winner submissions), redeem winnings from settled markets, and manage ERC-20 token allowances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, querying historical on-chain data, or managing positions."
+description: "Gensyn Delphi prediction market platform. List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, winner submissions), check subgraph indexing status, redeem winnings from settled markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, querying historical on-chain data, managing positions, or checking balances."
 compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_API_ACCESS_KEY and wallet signing credentials are mandatory. Network defaults (RPC URL, chain ID, gateway contract, API URL) are set automatically based on DELPHI_NETWORK (default: testnet)."
 ---
 
@@ -19,10 +19,12 @@ Dynamic parimutuel markets are betting or prediction systems where prices (odds)
 - User wants to buy or sell outcome shares
 - User wants to check their portfolio, positions, or trade history
 - User wants to redeem winnings from a resolved market
+- User wants to liquidate positions in an expired (unresolved) market
 - If the user asks you to create a market, remind them that markets not created on the UI will not show up on the UI
 - User wants to check or set token approval for trading
 - User wants to query historical on-chain trade data (buys, sells, redemptions, liquidations)
 - User wants recent trades for a market or wallet via the Goldsky subgraph
+- User wants to check their wallet ETH or token balances
 - Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -46,9 +48,11 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/buy-shares.ts` | Buy shares (on-chain) | `npx tsx scripts/buy-shares.ts <market-address> <outcome-idx> <shares> [slippage-pct]` |
 | `scripts/sell-shares.ts` | Sell shares (on-chain) | `npx tsx scripts/sell-shares.ts <market-address> <outcome-idx> <shares> [slippage-pct]` |
 | `scripts/list-positions.ts` | List wallet positions | `npx tsx scripts/list-positions.ts [wallet-address]` |
-| `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address>` |
-| `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount]` |
+| `scripts/redeem.ts` | Redeem winnings from settled markets | `npx tsx scripts/redeem.ts <market-address> [market-address ...]` |
+| `scripts/liquidate.ts` | Liquidate positions in expired markets | `npx tsx scripts/liquidate.ts <market-address> [market-address ...]` |
+| `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount\|unlimited]` |
 | `scripts/list-recent-trades.ts` | List recent trades via subgraph | `npx tsx scripts/list-recent-trades.ts <market-proxy-address> [limit]` |
+| `scripts/get-wallet-balances.ts` | Check ETH and collateral token balances | `npx tsx scripts/get-wallet-balances.ts` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -134,6 +138,7 @@ These override the network defaults if you need to point at a custom endpoint:
 | `DELPHI_GATEWAY_CONTRACT` | Custom gateway contract address |
 | `DELPHI_API_BASE_URL` | Custom API base URL |
 | `DELPHI_SUBGRAPH_URL` | Custom Goldsky subgraph endpoint |
+| `DELPHI_TOKEN_ADDRESS` | Override the ERC-20 collateral token address |
 | `DELPHI_SIGNER_TYPE` | `"private_key"` or `"cdp_server_wallet"` (default) |
 | `CF_ACCESS_ID` | Cloudflare Access client ID |
 | `CF_ACCESS_SECRET` | Cloudflare Access client secret |
@@ -184,16 +189,34 @@ const toSpotPrice = (n: bigint) => `${(Number(n) / 1e18).toFixed(4)} USDC/share`
 
 ```typescript
 const { markets } = await client.listMarkets({
-  status: "open",   // "open" | "closed" | "settled"
-  category: "crypto",
+  status: "open",        // "open" | "closed" | "settled"
+  category: "crypto",   // crypto, culture, economics, miscellaneous, politics, sports
   limit: 20,
   skip: 0,
+  orderBy: "liquidity", // "liquidity" (default) | "created"
+  verifiable: true,     // optional: filter to markets with verifiable settlement
 });
 
 for (const market of markets ?? []) {
-  const meta = market.metadata as { question?: string; outcomes?: string[] } | null;
+  const meta = market.metadata as {
+    question?: string;
+    outcomes?: string[];
+    model?: { model_identifier?: string; prompt_context?: string };
+    initial_liquidity?: string;
+    version?: string;
+  } | null;
   console.log(market.id, meta?.question);
-  // market.implementation = on-chain proxy address (use as marketAddress)
+  // market.id                     = market address — use this as marketAddress in all SDK calls
+  // market.implementation         = underlying logic contract (NOT used for SDK calls)
+  // market.verifiable             = true if market uses verifiable settlement
+  // market.tradingFee             = 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
+  //                                 convert: Number(market.tradingFee) / 1e18 * 100 → fee percentage
+  // market.winningOutcomeIdx      = set after settlement, otherwise null
+  // market.proof                  = settlement proof string, or null
+  // market.error                  = resolution error message if settlement failed, or null
+  // market.fetchResponseStatus    = metadata fetch status string (e.g. "success"), or null
+  // market.metadataUriContentHash = hex hash of the fetched metadata content (e.g. "0x9434...")
+  // market.dataSources            = string[] of data source identifiers (e.g. ["chess.com"]), or null
 }
 ```
 
@@ -204,14 +227,16 @@ for (const market of markets ?? []) {
 ```typescript
 const market = await client.getMarket({ id: "<market-id>" });
 const meta = market.metadata as { question?: string; outcomes?: string[] } | null;
-// market.implementation = marketAddress for all on-chain calls
+// market.id             = use as marketAddress for all SDK calls (quoteBuy, buyShares, etc.)
+// market.implementation = the logic contract address — NOT the marketAddress for SDK calls
 ```
 
 ### Live prices (on-chain read via Gateway ABI)
 
 ```typescript
 import { createPublicClient, http, defineChain, type Abi } from "viem";
-import { DYNAMIC_PARIMUTUEL_GATEWAY_ABI } from "@gensyn-ai/gensyn-delphi-sdk";
+import { DYNAMIC_PARIMUTUEL_GATEWAY_ABI, ERC20_ABI } from "@gensyn-ai/gensyn-delphi-sdk";
+// ERC20_ABI is also exported for direct token interactions if needed
 
 const chain = defineChain({
   id: Number(process.env.GENSYN_CHAIN_ID),
@@ -354,6 +379,28 @@ for (const r of results) {
 }
 ```
 
+### Liquidate expired positions
+
+> **Tip**: See `scripts/liquidate.ts` for a complete working example.
+
+Liquidation is for positions in **expired** markets that were never settled. Unlike redemption (which is for settled markets with a winner), liquidation recovers tokens from markets that expired without resolution.
+
+```typescript
+// Liquidate a single market — pass all outcome indices you hold
+const { transactionHash, sharesIn, totalTokensOut } = await client.liquidate({
+  marketAddress: "0x..." as `0x${string}`,
+  outcomeIndices: [0, 1],  // all outcome indices with positions
+});
+// sharesIn: bigint[] — shares burned per outcome index
+// totalTokensOut: bigint — total USDC recovered across all outcomes
+
+// Derive outcome indices from listPositions:
+const { positions } = await client.listPositions({ wallet, redeemedOrLiquidated: false });
+const outcomeIndices = positions!
+  .filter(p => p.marketProxy === marketAddress && BigInt(p.shares) > 0n)
+  .map(p => Number(p.outcomeIdx));
+```
+
 ### Token approval
 
 > **Tip**: See `scripts/token-approval.ts` for a complete working example.
@@ -369,10 +416,31 @@ await client.approveToken({ marketAddress });
 await client.approveToken({ marketAddress, amount: 50_000_000n });
 
 // Idempotent: only approves if current allowance is below minimum
-const { approvalNeeded } = await client.ensureTokenApproval({
+// Response always includes current allowance, plus transactionHash if a tx was sent
+const { approvalNeeded, allowance, transactionHash } = await client.ensureTokenApproval({
   marketAddress,
   minimumAmount: requiredTokens,
+  approveAmount: 100_000_000n,  // optional: amount to approve if needed (defaults to max uint256)
 });
+```
+
+### Check wallet balances
+
+> **Tip**: See `scripts/get-wallet-balances.ts` for a complete working example.
+
+```typescript
+// ETH (native gas token)
+const ethBalance = await client.getEthBalance();
+console.log(`ETH: ${(Number(ethBalance) / 1e18).toFixed(6)}`);
+
+// ERC-20 collateral token (defaults to SDK-configured token address)
+const tokenAddress = client.getTokenAddress(); // inspect the configured token address
+const { balance, decimals } = await client.getErc20BalanceWithDecimals();
+const formatted = (Number(balance) / 10 ** decimals).toFixed(decimals > 6 ? 6 : decimals);
+console.log(`Token (${tokenAddress}): ${formatted}`);
+
+// Or fetch raw balance only (6-decimal for USDC)
+const raw = await client.getErc20Balance(); // uses default token; pass address to override
 ```
 
 ### Query recent trades via subgraph
@@ -398,11 +466,17 @@ for (const buy of buys) {
 }
 
 // Arbitrary GraphQL: recent buys across all markets
+// SubgraphBuy, SubgraphSell, SubgraphMeta are all exported from the SDK for typing:
+//   import type { SubgraphBuy, SubgraphSell, SubgraphMeta } from "@gensyn-ai/gensyn-delphi-sdk";
 const data = await subgraph.query<{ gatewayBuys: SubgraphBuy[] }>(`{
   gatewayBuys(first: 5, orderBy: timestamp_, orderDirection: desc) {
     id buyer marketProxy tokensIn sharesOut timestamp_
   }
 }`);
+
+// Check subgraph indexing status (block number, deployment, error flag)
+const meta = await subgraph.getMeta();
+console.log(`Block: ${meta.block.number}, indexing errors: ${meta.hasIndexingErrors}`);
 ```
 
 Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewayLiquidations`, `gatewayWinnerSubmitteds`. All support filtering (`where`), ordering (`orderBy` + `orderDirection`), and pagination (`first` + `skip`).
