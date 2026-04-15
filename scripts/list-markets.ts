@@ -1,7 +1,7 @@
 /**
  * List markets.
  * Usage: npx tsx scripts/list-markets.ts [status] [category] [limit]
- *   status   - open | closed | settled  (default: open)
+ *   status   - open | awaiting_settlement | settled | expired  (default: open)
  *   category - e.g. crypto, weather     (default: all)
  *   limit    - number of results        (default: 20)
  *
@@ -12,7 +12,7 @@
  */
 import { client } from "./client.js";
 
-const status = (process.argv[2] ?? "open") as "open" | "closed" | "settled";
+const status = (process.argv[2] ?? "open") as "open" | "awaiting_settlement" | "settled" | "expired";
 const category = process.argv[3] || undefined;
 const limit = Number(process.argv[4] ?? 20);
 

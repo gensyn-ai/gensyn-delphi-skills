@@ -17,11 +17,13 @@ if (!addr) {
   process.exit(1);
 }
 
+const MAX_UINT256 = 2n ** 256n - 1n;
 const marketAddress = addr as `0x${string}`;
 const { ownerAddress, allowance } = await client.getTokenAllowance({ marketAddress });
+const allowanceDisplay = allowance === MAX_UINT256 ? "unlimited" : toUsdc(allowance);
 
 console.log("Wallet:    " + ownerAddress);
-console.log("Allowance: " + toUsdc(allowance));
+console.log("Allowance: " + allowanceDisplay);
 
 if (!amountStr) {
   process.exit(0);
@@ -37,4 +39,5 @@ if (amountStr === "unlimited") {
 }
 
 const { allowance: newAllowance } = await client.getTokenAllowance({ marketAddress });
-console.log("New allowance: " + toUsdc(newAllowance));
+const newAllowanceDisplay = newAllowance === MAX_UINT256 ? "unlimited" : toUsdc(newAllowance);
+console.log("New allowance: " + newAllowanceDisplay);

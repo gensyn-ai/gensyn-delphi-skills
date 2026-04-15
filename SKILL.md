@@ -88,7 +88,7 @@ When required environment variables are not set, do NOT ask the user for their v
 
 | Variable | Where to get it |
 |----------|----------------|
-| `DELPHI_API_ACCESS_KEY` | **Testnet:** Generate at https://delphi-api-access-app.pages.dev/ · **Mainnet:** Generate at <MOCKED_API_GEN_LINK> |
+| `DELPHI_API_ACCESS_KEY` | **Testnet:** Generate at https://delphi-api-access.gensyn.ai/ · **Mainnet:** Generate at <MOCKED_API_GEN_LINK> |
 
 **Plus one of these signing options (tell the user to pick one):**
 
@@ -122,8 +122,10 @@ The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the
 When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public`
 - Chain ID: `685685`
-- Gateway: `0x469388CD2498b43925f562FaA333D95135b66c06`
-- API URL: `https://delphi-agentic-trading-api.gensyn-staging.ai/`
+- Gateway: `0x7b8FDBD187B0Be5e30e48B1995df574A62667147`
+- Token: `0x0724D6079b986F8e44bDafB8a09B60C0bd6A45a1`
+- API URL: `https://delphi-api.gensyn.ai/`
+- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet/1.0.0/gn`
 
 When `DELPHI_NETWORK=mainnet`, mainnet defaults are used instead.
 
@@ -140,24 +142,19 @@ These override the network defaults if you need to point at a custom endpoint:
 | `DELPHI_SUBGRAPH_URL` | Custom Goldsky subgraph endpoint |
 | `DELPHI_TOKEN_ADDRESS` | Override the ERC-20 collateral token address |
 | `DELPHI_SIGNER_TYPE` | `"private_key"` or `"cdp_server_wallet"` (default) |
-| `CF_ACCESS_ID` | Cloudflare Access client ID |
-| `CF_ACCESS_SECRET` | Cloudflare Access client secret |
 
 ## Client setup
 
 ```typescript
-import { DelphiClient } from "@gensyn-ai/gensyn-delphi-sdk";
+import {
+  DelphiClient,
+  SubgraphClient,
+  createPrivateKeySigner,
+  createCdpSigner,
+} from "@gensyn-ai/gensyn-delphi-sdk";
 
 // All config is read from environment variables automatically.
 const client = new DelphiClient();
-
-// With Cloudflare Access:
-const client = new DelphiClient({
-  extraHeaders: {
-    "CF-Access-Client-Id": process.env.CF_ACCESS_ID!,
-    "CF-Access-Client-Secret": process.env.CF_ACCESS_SECRET!,
-  },
-});
 ```
 
 ## Units
@@ -167,7 +164,7 @@ const client = new DelphiClient({
 | Shares | 18-decimal bigint | `1n * 10n**18n` = 1 share |
 | USDC | 6-decimal bigint | `1_000_000n` = 1 USDC |
 | Implied probability | 18-decimal (1e18 = 100%) | `5n * 10n**17n` = 50% |
-| Spot price | 18-decimal (1e18 = 1.0 USDC/share) | `6n * 10n**17n` = 0.60 USDC/share |
+| Spot price | 6-decimal (1e6 = 1.0 USDC/share) | `600_000n` = 0.60 USDC/share |
 
 ```typescript
 // Human → raw bigint (inputs to SDK)
@@ -178,7 +175,7 @@ const usdcToBigint   = (n: number) => BigInt(Math.round(n * 1e6));
 const toUsdc      = (n: bigint) => `${(Number(n) / 1e6).toFixed(6)} USDC`;
 const toShares    = (n: bigint) => `${(Number(n) / 1e18).toFixed(4)} shares`;
 const toProb      = (n: bigint) => `${(Number(n) / 1e18 * 100).toFixed(2)}%`;
-const toSpotPrice = (n: bigint) => `${(Number(n) / 1e18).toFixed(4)} USDC/share`;
+const toSpotPrice = (n: bigint) => `${(Number(n) / 1e6).toFixed(4)} USDC/share`;
 ```
 
 ## Core patterns
@@ -189,7 +186,7 @@ const toSpotPrice = (n: bigint) => `${(Number(n) / 1e18).toFixed(4)} USDC/share`
 
 ```typescript
 const { markets } = await client.listMarkets({
-  status: "open",        // "open" | "closed" | "settled"
+  status: "open",        // "open" | "awaiting_settlement" | "settled" | "expired"
   category: "crypto",   // crypto, culture, economics, miscellaneous, politics, sports
   limit: 20,
   skip: 0,
@@ -208,15 +205,18 @@ for (const market of markets ?? []) {
   console.log(market.id, meta?.question);
   // market.id                     = market address — use this as marketAddress in all SDK calls
   // market.implementation         = underlying logic contract (NOT used for SDK calls)
+  // market.category               = market category string (e.g. "crypto")
   // market.verifiable             = true if market uses verifiable settlement
   // market.tradingFee             = 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
   //                                 convert: Number(market.tradingFee) / 1e18 * 100 → fee percentage
   // market.winningOutcomeIdx      = set after settlement, otherwise null
+  // market.resolvesAt             = ISO timestamp for when market resolves, or null
+  // market.settlesAt              = ISO timestamp for scheduled settlement, or null
   // market.proof                  = settlement proof string, or null
   // market.error                  = resolution error message if settlement failed, or null
   // market.fetchResponseStatus    = metadata fetch status string (e.g. "success"), or null
   // market.metadataUriContentHash = hex hash of the fetched metadata content (e.g. "0x9434...")
-  // market.dataSources            = string[] of data source identifiers (e.g. ["chess.com"]), or null
+  // market.dataSources            = data source identifiers, or null
 }
 ```
 

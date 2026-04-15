@@ -30,7 +30,7 @@ function outcomeIndicesFor(marketAddress: string): number[] {
     new Set(
       positionsInMarkets
         .filter((p) => p.marketProxy === marketAddress)
-        .map((p) => Number((p as { outcomeIdx?: number | string }).outcomeIdx)),
+        .map((p) => Number(p.outcomeIdx)),
     ),
   );
 }
