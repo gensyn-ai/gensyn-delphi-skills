@@ -1,20 +1,20 @@
 ---
 name: delphi
-description: "Gensyn Delphi prediction market platform. List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, winner submissions), check subgraph indexing status, redeem winnings from settled markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi prediction markets — browsing, researching, trading, querying historical on-chain data, managing positions, or checking balances."
+description: "Gensyn Delphi information market tools. List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, winner submissions), check subgraph indexing status, redeem winnings from settled markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi information markets — browsing, researching, trading, querying historical on-chain data, managing positions, or checking balances."
 compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_API_ACCESS_KEY and wallet signing credentials are mandatory. Network defaults (RPC URL, chain ID, gateway contract, API URL) are set automatically based on DELPHI_NETWORK (default: testnet)."
 ---
 
 # Delphi
 
-Gensyn Delphi is a dynamic parimutuel prediction market on Gensyn. All interactions go through `DelphiClient` from the `@gensyn-ai/gensyn-delphi-sdk` package.
+Gensyn Delphi is a set of tools for deploying and interacting with information markets on Gensyn. Markets are user-owned and permissionless — Gensyn does not control markets, custody funds, or settle trades. The API is maintained for convenience. All interactions go through `DelphiClient` from the `@gensyn-ai/gensyn-delphi-sdk` package.
 
 ## How dynamic parimutuel markets work
 
-Dynamic parimutuel markets are betting or prediction systems where prices (odds) emerge endogenously from the distribution of all participants' wagers rather than being set by a market maker. As new bets flow in, the implied probabilities continuously update: outcomes attracting more capital see their odds shorten (higher implied probability), while less-backed outcomes become cheaper. Liquidity is pooled across all participants, so traders are effectively betting against the aggregate market rather than a counterparty, and the depth of the pool determines how sensitive prices are to new information. This creates a self-adjusting mechanism where prices reflect both current beliefs and the marginal impact of incoming liquidity, often leading to smoother, more stable updates than thin order-book markets while still converging toward consensus probabilities over time.
+Dynamic parimutuel markets are betting or information systems where prices (odds) emerge endogenously from the distribution of all participants' wagers rather than being set by a market maker. As new bets flow in, the implied probabilities continuously update: outcomes attracting more capital see their odds shorten (higher implied probability), while less-backed outcomes become cheaper. Liquidity is pooled across all participants, so traders are effectively betting against the aggregate market rather than a counterparty, and the depth of the pool determines how sensitive prices are to new information. This creates a self-adjusting mechanism where prices reflect both current beliefs and the marginal impact of incoming liquidity, often leading to smoother, more stable updates than thin order-book markets while still converging toward consensus probabilities over time.
 
 ## When to use this skill
 
-- User wants to list, search, or browse prediction markets
+- User wants to list, search, or browse information markets
 - User wants prices, probabilities, or details for a specific market
 - User wants to buy or sell outcome shares
 - User wants to check their portfolio, positions, or trade history
@@ -25,7 +25,7 @@ Dynamic parimutuel markets are betting or prediction systems where prices (odds)
 - User wants to query historical on-chain trade data (buys, sells, redemptions, liquidations)
 - User wants recent trades for a market or wallet via the Goldsky subgraph
 - User wants to check their wallet ETH or token balances
-- Any question about Delphi, Gensyn prediction markets, or on-chain trading on Gensyn
+- Any question about Delphi information markets, or on-chain trading on Gensyn
 
 ## Installation
 
