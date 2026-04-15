@@ -21,8 +21,8 @@ const subgraph = client.getSubgraph();
 
 | Network | Default endpoint |
 |---------|-----------------|
-| testnet | `https://api.goldsky.com/api/public/project_cmgzfvv29eu3601tm97hzgzg5/subgraphs/test-graph/1.0.0/gn` |
-| mainnet | `https://api.goldsky.com/api/public/project_cmgzfvv29eu3601tm97hzgzg5/subgraphs/delphi-mainnet/1.0.0/gn` |
+| testnet | `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet/1.0.0/gn` |
+| mainnet | Not yet available |
 
 ## SubgraphClient API
 
@@ -54,6 +54,14 @@ getMeta(): Promise<SubgraphMeta>
 Returns the current indexed block, deployment hash, and whether the subgraph has indexing errors. Useful for checking data freshness.
 
 ## Types
+
+`SubgraphBuy`, `SubgraphSell`, and `SubgraphMeta` are exported directly from the SDK:
+
+```typescript
+import type { SubgraphBuy, SubgraphSell, SubgraphMeta } from "@gensyn-ai/gensyn-delphi-sdk";
+```
+
+For other entities (redemptions, liquidations, winner submissions) define inline types as shown in the examples below.
 
 ### SubgraphBuy
 
@@ -284,6 +292,35 @@ const data = await subgraph.query<{ gatewayRedemptions: GatewayRedemption[] }>(`
     id timestamp_ marketProxy redeemer sharesIn tokensOut transactionHash_
   }
 }`);
+```
+
+### Query liquidations for a market
+
+```typescript
+interface GatewayLiquidation {
+  id: string;
+  timestamp_: string;
+  marketProxy: string | null;
+  liquidator: string | null;
+  outcomeIndices: string | null;  // Comma-separated outcome indices
+  sharesIn: string | null;        // Shares liquidated per outcome
+  totalTokensOut: string | null;  // Total USDC recovered (6-decimal bigint as string)
+}
+
+const data = await subgraph.query<{ gatewayLiquidations: GatewayLiquidation[] }>(`{
+  gatewayLiquidations(
+    first: 50,
+    orderBy: timestamp_, orderDirection: desc,
+    where: { marketProxy: "${marketProxy}" }
+  ) {
+    id timestamp_ marketProxy liquidator outcomeIndices sharesIn totalTokensOut transactionHash_
+  }
+}`);
+
+for (const liq of data.gatewayLiquidations) {
+  const recovered = Number(BigInt(liq.totalTokensOut ?? "0")) / 1e6;
+  console.log(`${liq.liquidator} recovered ${recovered.toFixed(4)} USDC`);
+}
 ```
 
 ### Query winner submissions

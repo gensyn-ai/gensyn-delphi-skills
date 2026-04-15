@@ -99,6 +99,63 @@ if (settledProxies.length > 0) {
 }
 ```
 
+## Liquidation
+
+Liquidation is for positions in **expired** markets that were never settled. Unlike redemption (which requires a settled market with a declared winner), liquidation recovers tokens from markets that expired without resolution. Only positions with non-zero shares can be liquidated.
+
+### liquidate — single market
+
+Pass all outcome indices you hold in the market:
+
+```typescript
+const { transactionHash, sharesIn, totalTokensOut } = await client.liquidate({
+  marketAddress: "0x..." as `0x${string}`,
+  outcomeIndices: [0, 1],  // all outcome indices with positions
+});
+// sharesIn: bigint[] — shares burned per outcome index
+// totalTokensOut: bigint — total USDC recovered across all outcomes
+console.log(`Recovered ${Number(totalTokensOut) / 1e6} USDC`);
+```
+
+### Deriving outcome indices from positions
+
+```typescript
+const { positions } = await client.listPositions({ wallet: myAddress, redeemedOrLiquidated: false });
+
+const outcomeIndices = positions!
+  .filter(p => p.marketProxy === marketAddress && BigInt(p.shares) > 0n)
+  .map(p => Number(p.outcomeIdx));
+
+if (outcomeIndices.length > 0) {
+  const { totalTokensOut } = await client.liquidate({ marketAddress, outcomeIndices });
+  console.log(`Recovered ${Number(totalTokensOut) / 1e6} USDC`);
+}
+```
+
+### Batch-liquidate all expired positions
+
+```typescript
+const { positions } = await client.listPositions({ wallet: myAddress, redeemedOrLiquidated: false });
+
+// Group non-zero positions by market
+const byMarket = new Map<string, number[]>();
+for (const p of positions ?? []) {
+  if (BigInt(p.shares) === 0n) continue;
+  if (p.marketStatus !== "expired") continue;
+  const indices = byMarket.get(p.marketProxy) ?? [];
+  indices.push(Number(p.outcomeIdx));
+  byMarket.set(p.marketProxy, indices);
+}
+
+for (const [marketAddress, outcomeIndices] of byMarket) {
+  const { totalTokensOut } = await client.liquidate({
+    marketAddress: marketAddress as `0x${string}`,
+    outcomeIndices,
+  });
+  console.log(`${marketAddress}: recovered ${Number(totalTokensOut) / 1e6} USDC`);
+}
+```
+
 ## Portfolio value estimation
 
 Estimate the current liquidation value of all active positions:

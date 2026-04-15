@@ -15,26 +15,34 @@ const { markets } = await client.listMarkets(params);
 |-------|------|---------|-------------|
 | `skip` | `number` | `0` | Pagination offset |
 | `limit` | `number` | `50` | Max records returned |
-| `status` | `string` | — | `"open"` \| `"closed"` \| `"settled"` |
-| `category` | `string` | — | Filter by metadata category field |
+| `status` | `string` | — | `"open"` \| `"awaiting_settlement"` \| `"settled"` \| `"expired"` |
+| `category` | `string` | — | `"crypto"` \| `"culture"` \| `"economics"` \| `"miscellaneous"` \| `"politics"` \| `"sports"` |
+| `orderBy` | `string` | `"liquidity"` | `"liquidity"` \| `"created"` |
+| `verifiable` | `boolean` | — | If `true`, filter to markets with verifiable settlement only |
 
 ### Market type
 
 ```typescript
 interface Market {
-  id: string;                       // REST API market ID — use with getMarket()
-  status: string;                   // "open" | "closed" | "settled"
+  id: string;                       // Market proxy address — use as marketAddress in all SDK calls
+  status: string;                   // "open" | "awaiting_settlement" | "settled" | "expired"
   deployer: string;                 // Deployer address
-  implementation: string;           // On-chain proxy address — use as marketAddress
+  implementation: string;           // Logic contract address — NOT used for SDK calls
+  category: string | null;          // Market category (e.g. "crypto")
+  verifiable: boolean;              // true if market uses verifiable settlement
+  tradingFee: string | null;        // 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
   metadataUri: string;              // IPFS/HTTP metadata URI
-  metadataUriContentHash: string;
+  metadataUriContentHash: string;   // Hex hash of fetched metadata content
   metadata: unknown;                // Parsed metadata (see shape below)
+  dataSources: unknown | null;      // Data source identifiers, or null
   createdAt: string;                // ISO timestamp
   fetchedAt: string | null;
   fetchResponseStatus: string | null;
-  settledAt: string | null;         // ISO timestamp if settled
+  resolvesAt: string | null;        // ISO timestamp for when market resolves
+  settlesAt: string | null;         // ISO timestamp for scheduled settlement
   winningOutcomeIdx: string | null; // Winning outcome index string, if settled
-  error: string | null;
+  proof: string | null;             // Settlement proof string, or null
+  error: string | null;             // Resolution error message if settlement failed, or null
 }
 ```
 
@@ -58,8 +66,8 @@ The `outcomes` array is critical for labelling: `outcomes[0]` is the label for `
 
 | Field | Purpose |
 |-------|---------|
-| `market.id` | Pass to `getMarket({ id })` |
-| `market.implementation` | Pass as `marketAddress` to all SDK trading/quote/approval calls |
+| `market.id` | Pass as `marketAddress` to all SDK trading/quote/approval calls; also pass to `getMarket({ id })` |
+| `market.implementation` | Logic contract — not used in SDK calls |
 
 ## getMarket
 
@@ -67,7 +75,7 @@ The `outcomes` array is critical for labelling: `outcomes[0]` is the label for `
 const market = await client.getMarket({ id: "<market-id>" });
 ```
 
-Returns the same `Market` type. The `id` comes from `listMarkets`.
+Returns the same `Market` type. Pass `market.id` from `listMarkets` as the `id`.
 
 ## Market status values
 
@@ -84,22 +92,6 @@ type MarketStatus = "open" | "awaiting_settlement" | "settled" | "expired";
 | `awaiting_settlement` | Trading deadline passed, awaiting settlement |
 | `settled` | Winner submitted, positions redeemable |
 | `expired` | Market expired without settlement (positions not redeemable) |
-
-## Paginating through all markets
-
-```typescript
-let skip = 0;
-const limit = 50;
-const all: Market[] = [];
-
-while (true) {
-  const { markets } = await client.listMarkets({ status: "open", skip, limit });
-  if (!markets || markets.length === 0) break;
-  all.push(...markets);
-  if (markets.length < limit) break;
-  skip += limit;
-}
-```
 
 ## Finding a market by question keyword
 

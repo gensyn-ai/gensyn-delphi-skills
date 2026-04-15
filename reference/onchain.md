@@ -4,10 +4,10 @@
 
 | Contract | Address |
 |----------|---------|
-| Gateway | `0x469388CD2498b43925f562FaA333D95135b66c06` (set via `DELPHI_GATEWAY_CONTRACT`) |
+| Gateway | `0x7b8FDBD187B0Be5e30e48B1995df574A62667147` (set via `DELPHI_GATEWAY_CONTRACT`) |
 | Chain ID | `685685` |
 
-The Gateway is the single entry point for all on-chain interactions. Market proxy addresses (from `market.implementation`) are passed as arguments to Gateway functions.
+The Gateway is the single entry point for all on-chain interactions. Market proxy addresses (from `market.id`) are passed as arguments to Gateway functions.
 
 ## viem client setup
 
@@ -34,14 +34,14 @@ const gateway = process.env.DELPHI_GATEWAY_CONTRACT as `0x${string}`;
 | `quoteSellExactIn` | `marketProxy, outcomeIdx, sharesIn` | `tokensOut: uint256` | USDC payout (6 dec) |
 | `spotImpliedProbability` | `marketProxy, outcomeIdx` | `uint256` | 1e18 = 100% |
 | `spotImpliedProbabilities` | `marketProxy, outcomeIndices[]` | `uint256[]` | Batch |
-| `spotPrice` | `marketProxy, outcomeIdx` | `uint256` | 1e18 = 1.0 USDC/share |
+| `spotPrice` | `marketProxy, outcomeIdx` | `uint256` | 1e6 = 1.0 USDC/share |
 | `spotPrices` | `marketProxy, outcomeIndices[]` | `uint256[]` | Batch |
 | `balanceOf` | `marketProxy, owner, outcomeIdx` | `uint256` | Shares (18 dec) |
 | `batchBalanceOf` | `marketProxy, owners[], outcomeIndices[]` | `uint256[]` | Batch |
 | `totalSupply` | `marketProxy, outcomeIdx` | `uint256` | Total shares (18 dec) |
 | `totalSupplies` | `marketProxy, outcomeIndices[]` | `uint256[]` | Batch |
 | `getMarket` | `marketProxy` | `Market struct` | Full on-chain state |
-| `marketStatus` | `marketProxy` | `uint8` | 0=Open, 1=Closed, 2=Settled |
+| `marketStatus` | `marketProxy` | `uint8` | 0=Open, 1=AwaitingSettlement, 2=Settled, 3=Expired |
 | `token` | `marketProxy` | `address` | Collateral token address |
 
 ## Gateway write functions
@@ -75,7 +75,7 @@ const prices = await publicClient.readContract({
   functionName: "spotPrices",
   args: [marketProxy, [0n, 1n]],
 }) as bigint[];
-// prices[i] / 1e18 = USDC per share
+// prices[i] / 1e6 = USDC per share
 ```
 
 ### Full market state
@@ -93,8 +93,8 @@ const onchainMarket = await publicClient.readContract({
     tradingDeadline: bigint;    // Unix timestamp
     settlementDeadline: bigint; // Unix timestamp
   };
-  pool: bigint;        // Total collateral (18 dec)
-  tradingFees: bigint; // Accumulated fees
+  pool: bigint;        // Total collateral (6 dec, USDC)
+  tradingFees: bigint; // Accumulated fees (6 dec, USDC)
 };
 
 const feePercent = Number(onchainMarket.config.tradingFee) / 1e18 * 100;
@@ -157,7 +157,7 @@ WALLET_PRIVATE_KEY=0x<hex-private-key>
 # Optional overrides (defaults are set automatically by DELPHI_NETWORK=testnet):
 # GENSYN_RPC_URL=https://gensyn-testnet.g.alchemy.com/public
 # GENSYN_CHAIN_ID=685685
-# DELPHI_GATEWAY_CONTRACT=0x469388CD2498b43925f562FaA333D95135b66c06
+# DELPHI_GATEWAY_CONTRACT=0x7b8FDBD187B0Be5e30e48B1995df574A62667147
 ```
 
 ### CDP Server Wallet (production)
@@ -170,7 +170,7 @@ CDP_WALLET_ADDRESS=0x<wallet-address>
 # Optional overrides (defaults are set automatically by DELPHI_NETWORK=testnet):
 # GENSYN_RPC_URL=https://gensyn-testnet.g.alchemy.com/public
 # GENSYN_CHAIN_ID=685685
-# DELPHI_GATEWAY_CONTRACT=0x469388CD2498b43925f562FaA333D95135b66c06
+# DELPHI_GATEWAY_CONTRACT=0x7b8FDBD187B0Be5e30e48B1995df574A62667147
 ```
 
 CDP Server Wallets are managed by Coinbase Developer Platform. The SDK uses `@coinbase/cdp-sdk` under the hood.

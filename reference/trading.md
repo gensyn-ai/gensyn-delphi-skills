@@ -4,9 +4,9 @@
 
 Delphi uses **Dynamic Parimutuel** markets:
 - Prices shift continuously with every trade (no fixed order book)
-- `spotImpliedProbability` reflects the market's current consensus probability
-- For a binary market: `prob[0] + prob[1] = 1e18` (100%)
-- A spot price of `0.65 USDC/share` means ~65% implied probability
+- **Spot price** (`spotPrices`) — the marginal USDC cost to acquire the next share of an outcome (6-decimal). This is the instantaneous price at the margin and is *not* equal to the implied probability.
+- **Implied probability** (`spotImpliedProbabilities`) — the market's current consensus probability for an outcome (18-decimal, 1e18 = 100%). For a binary market: `prob[0] + prob[1] = 1e18`.
+- These two values diverge in DPMs — always use `spotImpliedProbabilities` when you want a probability, and `spotPrices` when you want the cost per share.
 
 ## Quotes (read-only, no gas)
 
@@ -151,7 +151,8 @@ const spotPrices = await publicClient.readContract({
   args: [marketProxy, [0n, 1n]],
 }) as bigint[];
 
-const currentPricePerShare = Number(spotPrices[outcomeIdx]) / 1e18;
+const currentPricePerShare = Number(spotPrices[outcomeIdx]) / 1e6;
+const sharesHuman = Number(sharesOut) / 1e18;
 const { tokensIn } = await client.quoteBuy({ marketAddress, outcomeIdx, sharesOut });
 const quotedPricePerShare = (Number(tokensIn) / 1e6) / sharesHuman;
 const priceImpact = ((quotedPricePerShare - currentPricePerShare) / currentPricePerShare) * 100;
