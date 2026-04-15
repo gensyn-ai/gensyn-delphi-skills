@@ -88,7 +88,7 @@ When required environment variables are not set, do NOT ask the user for their v
 
 | Variable | Where to get it |
 |----------|----------------|
-| `DELPHI_API_ACCESS_KEY` | **Testnet:** Generate at https://delphi-api-access.gensyn.ai/ · **Mainnet:** Generate at <MOCKED_API_GEN_LINK> |
+| `DELPHI_API_ACCESS_KEY` | **Testnet:** Generate at https://delphi-api-access.gensyn.ai/ · **Mainnet:** Generate at https://api-access.delphi.fyi/ |
 
 **Plus one of these signing options (tell the user to pick one):**
 
@@ -409,7 +409,7 @@ const outcomeIndices = positions!
 // Check current allowance
 const { ownerAddress, allowance } = await client.getTokenAllowance({ marketAddress });
 
-// Approve unlimited (recommended)
+// Approve unlimited
 await client.approveToken({ marketAddress });
 
 // Approve specific amount (50 USDC)
