@@ -132,7 +132,13 @@ When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - API URL: `https://delphi-api.gensyn.ai/`
 - Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet/1.0.0/gn`
 
-When `DELPHI_NETWORK=mainnet`, mainnet defaults are used instead.
+When `DELPHI_NETWORK=mainnet`, the SDK automatically uses:
+- RPC URL: `https://gensyn-mainnet.g.alchemy.com/public`
+- Chain ID: `685689`
+- Gateway: `0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700`
+- Token: `0x5b32c997211621d55a89Cc5abAF1cC21F3A6ddF5`
+- API URL: `https://api.delphi.fyi/`
+- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-mainnet/1.0.0/gn`
 
 ### Optional overrides
 
