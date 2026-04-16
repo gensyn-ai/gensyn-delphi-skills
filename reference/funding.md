@@ -28,7 +28,7 @@ Use the provided script to bridge ETH from Sepolia to Gensyn Testnet:
 ```bash
 npx tsx scripts/bridge-eth-to-gensyn-testnet.ts <amount-eth>
 # or
-npm run bridge-eth-to-gensyn-testnet 0.01
+npm run bridge-eth-to-gensyn-testnet 0.0001
 ```
 
 ETH appears on Gensyn Testnet within a few minutes after Sepolia confirmation. The deposit will show up under the **Internal txns** tab on https://gensyn-testnet.explorer.alchemy.com/ — not under regular Transactions — because OP Stack deposits are a special transaction type (type `0x7e`) triggered by the L1 bridge rather than a user-signed L2 transaction.
@@ -135,28 +135,26 @@ cast send 0xB5876320DdA1AEE3eFC03aD02dC2e2CB4b61B7D9 \
 
 **Prerequisites:** You need both **ETH** and **USDC** on Ethereum mainnet before bridging. ETH is needed to pay L1 gas for the bridge transactions themselves, and once bridged, to pay gas when trading on Gensyn. USDC is the collateral you'll bridge over to trade. Ensure your wallet on Ethereum mainnet is funded with both before proceeding.
 
-### Getting ETH (L1 → Gensyn Mainnet)
+### Getting ETH (Ethereum mainnet → Gensyn Mainnet)
 
-Bridge ETH from Ethereum mainnet to Gensyn using the OP Stack Canonical Bridge.
-
-**L1StandardBridge:** `<MAINNET_L1_STANDARD_BRIDGE_ADDRESS>` *(on Ethereum mainnet)*
+Bridge ETH from Ethereum mainnet to Gensyn using the OP Stack Canonical Bridge. Requires `DELPHI_NETWORK=mainnet` in your `.env`.
 
 ```bash
-# Deposit ETH from Ethereum mainnet to Gensyn mainnet
-cast send <MAINNET_L1_STANDARD_BRIDGE_ADDRESS> \
-  "depositETH(uint32,bytes)" 200000 "0x" \
-  --value 0.1ether \
-  --rpc-url https://ethereum.publicnode.com \
-  --private-key $PRIVATE_KEY
+npx tsx scripts/bridge-eth-to-gensyn-mainnet.ts <amount-eth>
+# or
+npm run bridge-eth-to-gensyn-mainnet 0.0001
 ```
 
-**Key mainnet contracts:**
+ETH arrives within a few minutes and appears under the **Internal txns** tab on the Gensyn mainnet explorer — same as testnet.
+
+**Key contracts:**
 
 | Contract | Network | Address |
 |----------|---------|---------|
-| L1StandardBridge | Ethereum mainnet | `<MAINNET_L1_STANDARD_BRIDGE_ADDRESS>` |
-| OptimismPortal | Ethereum mainnet | `<MAINNET_OPTIMISM_PORTAL_ADDRESS>` |
+| L1StandardBridge | Ethereum mainnet | `0x611718beda147c549bdfddf7b92d74da4407d63f` |
+| L1CrossDomainMessenger | Ethereum mainnet | `0x0026ef2e0b5b163c3403e68d15ff2820b34e5c42` |
 | L2StandardBridge | Gensyn mainnet | `0x4200000000000000000000000000000000000010` |
+| L2CrossDomainMessenger | Gensyn mainnet | `0x4200000000000000000000000000000000000007` |
 
 ---
 

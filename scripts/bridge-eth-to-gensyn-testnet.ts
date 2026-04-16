@@ -4,7 +4,7 @@
  * Usage: npx tsx scripts/bridge-eth-to-gensyn-testnet.ts <amount-eth>
  *
  * Example:
- *   npx tsx scripts/bridge-eth-to-gensyn-testnet.ts 0.01
+ *   npx tsx scripts/bridge-eth-to-gensyn-testnet.ts 0.0001
  */
 import { createWalletClient, createPublicClient, http, parseEther, formatEther } from "viem";
 import { sepolia } from "viem/chains";

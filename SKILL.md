@@ -56,6 +56,7 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/get-wallet-balances.ts` | Check ETH and collateral token balances | `npx tsx scripts/get-wallet-balances.ts` |
 | `scripts/testnet-faucet.ts` | Claim 1,000 testnet USDC from the Gensyn faucet | `npx tsx scripts/testnet-faucet.ts` |
 | `scripts/bridge-eth-to-gensyn-testnet.ts` | Bridge ETH from Sepolia to Gensyn Testnet | `npx tsx scripts/bridge-eth-to-gensyn-testnet.ts <amount-eth>` |
+| `scripts/bridge-eth-to-gensyn-mainnet.ts` | Bridge ETH from Ethereum mainnet to Gensyn Mainnet | `npx tsx scripts/bridge-eth-to-gensyn-mainnet.ts <amount-eth>` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
