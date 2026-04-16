@@ -16,7 +16,8 @@
     "list-recent-trades": "tsx scripts/list-recent-trades.ts",
     "testnet-faucet": "tsx scripts/testnet-faucet.ts",
     "bridge-eth-to-gensyn-testnet": "tsx scripts/bridge-eth-to-gensyn-testnet.ts",
-    "bridge-eth-to-gensyn-mainnet": "tsx scripts/bridge-eth-to-gensyn-mainnet.ts"
+    "bridge-eth-to-gensyn-mainnet": "tsx scripts/bridge-eth-to-gensyn-mainnet.ts",
+    "bridge-usdc-to-gensyn-mainnet": "tsx scripts/bridge-usdc-to-gensyn-mainnet.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",

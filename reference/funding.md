@@ -133,7 +133,7 @@ cast send 0xB5876320DdA1AEE3eFC03aD02dC2e2CB4b61B7D9 \
 
 ## Mainnet
 
-**Prerequisites:** You need both **ETH** and **USDC** on Ethereum mainnet before bridging. ETH is needed to pay L1 gas for the bridge transactions themselves, and once bridged, to pay gas when trading on Gensyn. USDC is the collateral you'll bridge over to trade. Ensure your wallet on Ethereum mainnet is funded with both before proceeding.
+**Prerequisites:** You need both **ETH** and **native USDC** (Circle-issued, `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`) on Ethereum mainnet before bridging. USDC.e or other bridged variants will not work. ETH is needed to pay L1 gas for the bridge transactions themselves, and once bridged, to pay gas when trading on Gensyn. USDC is the collateral you'll bridge over to trade. Ensure your wallet on Ethereum mainnet is funded with both before proceeding.
 
 ### Getting ETH (Ethereum mainnet → Gensyn Mainnet)
 
@@ -158,23 +158,28 @@ ETH arrives within a few minutes and appears under the **Internal txns** tab on 
 
 ---
 
-### Getting USDC (LayerZero Bridge)
+### Getting USDC (Ethereum mainnet → Gensyn Mainnet via LayerZero)
 
-On mainnet, USDC is bridged cross-chain via the LayerZero bridge. This allows USDC from supported source chains (e.g., Ethereum, Arbitrum, Base) to be bridged directly to the Gensyn chain.
-
-**LayerZero bridge contract:** `<MAINNET_LAYERZERO_BRIDGE_ADDRESS>` *(on source chain)*
+USDC is bridged from Ethereum mainnet via Stargate V2 (LayerZero). You must hold **native USDC on Ethereum mainnet** (`0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`) — the canonical Circle-issued token. USDC.e, axlUSDC, or other bridged variants will not work. Requires `DELPHI_NETWORK=mainnet` in your `.env`. The script handles approval, quotes the LayerZero fee, and sends in one flow.
 
 ```bash
-# Bridge USDC via LayerZero
-# <details to be filled in with contract ABI and function signatures>
+npx tsx scripts/bridge-usdc-to-gensyn-mainnet.ts <amount-usdc> [slippage-pct]
+# or
+npm run bridge-usdc-to-gensyn-mainnet 10
+npm run bridge-usdc-to-gensyn-mainnet 10 1
 ```
 
-**Key mainnet bridge contracts:**
+The slippage default is 0.5%. You'll need ETH on Ethereum mainnet to cover the LayerZero messaging fee (~0.001–0.005 ETH) in addition to Ethereum gas. Track delivery at https://layerzeroscan.com/.
+
+**Key contracts:**
 
 | Contract | Network | Address |
 |----------|---------|---------|
-| LayerZero USDC Bridge | Source chain | `<MAINNET_LAYERZERO_BRIDGE_ADDRESS>` |
-| USDC (collateral token) | Gensyn mainnet | `<MAINNET_USDC_TOKEN_ADDRESS>` |
+| Stargate USDC Pool | Ethereum mainnet | `0xc026395860Db2d07ee33e05fE50ed7bD583189C7` |
+| USDC | Ethereum mainnet | `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` |
+| Bridged USDC (Stargate) | Gensyn mainnet | `0x5b32c997211621d55a89Cc5abAF1cC21F3A6ddF5` |
+| StargateOFT USDC | Gensyn mainnet | `0xc8D5b106fb3dB1140cfa12a94666de02A1d26183` |
+| Gensyn LZ Endpoint ID | — | `30412` |
 
 ---
 
