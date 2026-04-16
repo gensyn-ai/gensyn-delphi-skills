@@ -31,7 +31,7 @@ npx tsx scripts/bridge-eth-to-gensyn-testnet.ts <amount-eth>
 npm run bridge-eth-to-gensyn-testnet 0.01
 ```
 
-ETH appears on Gensyn Testnet within a few minutes after Sepolia confirmation.
+ETH appears on Gensyn Testnet within a few minutes after Sepolia confirmation. The deposit will show up under the **Internal txns** tab on https://gensyn-testnet.explorer.alchemy.com/ — not under regular Transactions — because OP Stack deposits are a special transaction type (type `0x7e`) triggered by the L1 bridge rather than a user-signed L2 transaction.
 
 Alternatively, call `depositETH` directly on the L1StandardBridge at `0xaf99ffa3281548a1c30fcb443f066eaff2d297d4` on Sepolia:
 
@@ -118,7 +118,7 @@ npx tsx scripts/testnet-faucet.ts
 npm run testnet-faucet
 ```
 
-This calls `drip()` on the faucet contract, logs your USDC balance before and after, and waits for the transaction to confirm.
+This calls `requestToken()` on the faucet contract, logs your USDC balance before and after, and waits for the transaction to confirm.
 
 Each call dispenses 1,000 USDC. To call the faucet directly with cast:
 
