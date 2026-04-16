@@ -25,6 +25,7 @@ Dynamic parimutuel markets are betting or information systems where prices (odds
 - User wants to query historical on-chain trade data (buys, sells, redemptions, liquidations)
 - User wants recent trades for a market or wallet via the Goldsky subgraph
 - User wants to check their wallet ETH or token balances
+- User wants to get ETH or USDC to fund their wallet for trading (testnet faucet, bridging)
 - Any question about Delphi information markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -53,6 +54,8 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount\|unlimited]` |
 | `scripts/list-recent-trades.ts` | List recent trades via subgraph | `npx tsx scripts/list-recent-trades.ts <market-proxy-address> [limit]` |
 | `scripts/get-wallet-balances.ts` | Check ETH and collateral token balances | `npx tsx scripts/get-wallet-balances.ts` |
+| `scripts/testnet-faucet.ts` | Claim 1,000 testnet USDC from the Gensyn faucet | `npx tsx scripts/testnet-faucet.ts` |
+| `scripts/bridge-eth-to-gensyn-testnet.ts` | Bridge ETH from Sepolia to Gensyn Testnet | `npx tsx scripts/bridge-eth-to-gensyn-testnet.ts <amount-eth>` |
 
 All scripts use the shared client setup from `scripts/client.ts` which handles environment variable configuration automatically. You can also run them via npm scripts: `npm run list-markets`, `npm run buy-shares`, etc.
 
@@ -503,3 +506,4 @@ Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewa
 | [reference/positions.md](reference/positions.md) | `Position`/`Trade` type schemas, batch redemption patterns, portfolio estimation |
 | [reference/onchain.md](reference/onchain.md) | Full Gateway ABI function list, direct `viem` read patterns, signing config |
 | [reference/subgraph.md](reference/subgraph.md) | Goldsky subgraph GraphQL schema, `SubgraphClient` API, entity types, filtering, raw query examples |
+| [reference/funding.md](reference/funding.md) | Getting ETH and USDC onto Gensyn (testnet faucet, OP Stack bridge, LayerZero USDC bridge) |

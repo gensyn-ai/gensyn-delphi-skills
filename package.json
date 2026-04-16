@@ -13,7 +13,9 @@
     "token-approval": "tsx scripts/token-approval.ts",
     "liquidate": "tsx scripts/liquidate.ts",
     "get-wallet-balances": "tsx scripts/get-wallet-balances.ts",
-    "list-recent-trades": "tsx scripts/list-recent-trades.ts"
+    "list-recent-trades": "tsx scripts/list-recent-trades.ts",
+    "testnet-faucet": "tsx scripts/testnet-faucet.ts",
+    "bridge-eth-to-gensyn-testnet": "tsx scripts/bridge-eth-to-gensyn-testnet.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
