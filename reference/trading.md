@@ -87,25 +87,6 @@ const minTokensOut = tokensOut * 98n / 100n;
 const { transactionHash } = await client.sellShares({ marketAddress, outcomeIdx, sharesIn, minTokensOut });
 ```
 
-## Slippage guidelines
-
-| Scenario | Recommended slippage |
-|----------|---------------------|
-| Quiet market | 1–2% |
-| Active market | 2–5% |
-| Large trade (>$100) | 5–10% |
-| Time-sensitive execution | 5% |
-
-**Buy:** `maxTokensIn = quotedCost * (100 + slippage%) / 100`
-**Sell:** `minTokensOut = quotedPayout * (100 - slippage%) / 100`
-
-Using integer arithmetic to avoid floating point:
-```typescript
-const slippageBps = 200n; // 200 = 2%
-const maxTokensIn  = tokensIn  * (10000n + slippageBps) / 10000n;
-const minTokensOut = tokensOut * (10000n - slippageBps) / 10000n;
-```
-
 ## Common contract errors
 
 | Error | Cause | Fix |
