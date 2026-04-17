@@ -98,8 +98,6 @@ const hash = await walletClient.sendTransaction({
 | L2StandardBridge | `0x4200000000000000000000000000000000000010` |
 | L2CrossDomainMessenger | `0x4200000000000000000000000000000000000007` |
 
-See [gensyn-testnet-bridge-contracts.md](../gensyn-testnet-bridge-contracts.md) for the full contract list.
-
 ---
 
 ### Getting USDC (Testnet Faucet)
