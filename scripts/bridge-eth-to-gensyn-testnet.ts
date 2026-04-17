@@ -64,6 +64,10 @@ const hash = await sepoliaWalletClient.writeContract({
 console.log("Transaction: " + hash);
 console.log("Waiting for Sepolia confirmation...");
 
-await sepoliaPublicClient.waitForTransactionReceipt({ hash });
+const receipt = await sepoliaPublicClient.waitForTransactionReceipt({ hash });
+if (receipt.status === "reverted") {
+  console.error("Transaction reverted on Sepolia. No ETH was bridged.");
+  process.exit(1);
+}
 console.log("Confirmed on Sepolia. ETH will arrive on Gensyn Testnet within a few minutes.");
 console.log("Track on explorer: https://gensyn-testnet.explorer.alchemy.com/address/" + address);

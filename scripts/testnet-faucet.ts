@@ -30,7 +30,11 @@ const hash = await walletClient.writeContract({
 });
 console.log("Transaction: " + hash);
 
-await publicClient.waitForTransactionReceipt({ hash });
+const receipt = await publicClient.waitForTransactionReceipt({ hash });
+if (receipt.status === "reverted") {
+  console.error("Faucet transaction reverted. No USDC was minted.");
+  process.exit(1);
+}
 
 const balanceAfter = await client.getErc20Balance();
 console.log("Balance after:  " + (Number(balanceAfter) / 1e6).toFixed(6) + " USDC");

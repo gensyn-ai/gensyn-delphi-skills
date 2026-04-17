@@ -168,7 +168,11 @@ if (allowance < amountLD) {
     args: [STARGATE_USDC_POOL, amountLD],
   });
   console.log("Approval tx: " + approveHash);
-  await mainnetPublicClient.waitForTransactionReceipt({ hash: approveHash });
+  const approveReceipt = await mainnetPublicClient.waitForTransactionReceipt({ hash: approveHash });
+  if (approveReceipt.status === "reverted") {
+    console.error("Approval transaction reverted. No USDC was bridged.");
+    process.exit(1);
+  }
   console.log("Approved.");
 } else {
   console.log("\nSufficient USDC allowance already set.");
@@ -208,5 +212,9 @@ console.log("Transaction: " + hash);
 console.log("Track on LayerZero: https://layerzeroscan.com/tx/" + hash);
 console.log("Waiting for Ethereum mainnet confirmation...");
 
-await mainnetPublicClient.waitForTransactionReceipt({ hash });
+const receipt = await mainnetPublicClient.waitForTransactionReceipt({ hash });
+if (receipt.status === "reverted") {
+  console.error("Bridge transaction reverted on Ethereum mainnet. No USDC was bridged.");
+  process.exit(1);
+}
 console.log("Confirmed. USDC will arrive on Gensyn mainnet in ~1–3 minutes.");
