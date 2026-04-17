@@ -14,7 +14,7 @@ The process differs between testnet and mainnet.
 
 ### Getting ETH (Sepolia → Gensyn Testnet)
 
-Gensyn Testnet is an OP Stack L2 that settles on Ethereum Sepolia (chain ID 685685).
+Gensyn Testnet is an OP Stack L2 that settles on Ethereum Sepolia.
 
 **Step 1: Get Sepolia ETH**
 
@@ -135,7 +135,7 @@ cast send 0xB5876320DdA1AEE3eFC03aD02dC2e2CB4b61B7D9 \
 
 ### Getting ETH (Ethereum mainnet → Gensyn Mainnet)
 
-Bridge ETH from Ethereum mainnet to Gensyn using the OP Stack Canonical Bridge. Requires `DELPHI_NETWORK=mainnet` in your `.env`.
+Bridge ETH from Ethereum mainnet to Gensyn mainnet using the OP Stack Canonical Bridge. Requires `DELPHI_NETWORK=mainnet` in your `.env`.
 
 ```bash
 npx tsx scripts/bridge-eth-to-gensyn-mainnet.ts <amount-eth>
