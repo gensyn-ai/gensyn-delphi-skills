@@ -65,6 +65,10 @@ const hash = await mainnetWalletClient.writeContract({
 console.log("Transaction: " + hash);
 console.log("Waiting for Ethereum mainnet confirmation...");
 
-await mainnetPublicClient.waitForTransactionReceipt({ hash });
+const receipt = await mainnetPublicClient.waitForTransactionReceipt({ hash });
+if (receipt.status === "reverted") {
+  console.error("Transaction reverted on Ethereum mainnet. No ETH was bridged.");
+  process.exit(1);
+}
 console.log("Confirmed on Ethereum mainnet. ETH will arrive on Gensyn mainnet within a few minutes.");
 console.log("Deposits appear under the Internal txns tab on the Gensyn explorer.");
