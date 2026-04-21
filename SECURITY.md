@@ -1,3 +1,9 @@
+---
+layout: default
+title: Delphi – Security Disclosure
+description: Security disclosure policy for Delphi
+---
+
 # Reporting a Vulnerability
 
 If you believe you have found a security vulnerability in Delphi — whether in our smart contracts, web application, backend services, or supporting infrastructure — please report it responsibly.
@@ -42,10 +48,11 @@ The following are in scope for security reports:
 
 Delphi smart contracts are deployed on the Delphi network (EVM-compatible, Solidity 0.8.30). Core contracts include:
 
-| Contract                 | Testnet Address                              |
+| Contract                 | Mainnet Address                              |
 | ------------------------ | -------------------------------------------- |
-| DelphiFactory            | `0xd03CEC55802f0D44D844384E1144B25717315E5A` |
-| DynamicParimutuelGateway | `0x7b8FDBD187B0Be5e30e48B1995df574A62667147` |
+| DelphiFactory            | [`0x4596d847eA56DCf9A37944c13793Af802Fc5D1eC`](https://gensyn-mainnet.explorer.alchemy.com/address/0x4596d847eA56DCf9A37944c13793Af802Fc5D1eC) |
+| DynamicParimutuelMarket  | [`0x2fc709DF2fb31D362355D1be3F81EEAB8d238C5f`](https://gensyn-mainnet.explorer.alchemy.com/address/0x2fc709DF2fb31D362355D1be3F81EEAB8d238C5f) |
+| DynamicParimutuelGateway | [`0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700`](https://gensyn-mainnet.explorer.alchemy.com/address/0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700) |
 
 Issues of interest include but are not limited to:
 
@@ -59,7 +66,7 @@ Issues of interest include but are not limited to:
 
 ### Web Application and Backend Services
 
-- [delphi.gensyn.ai](https://delphi.gensyn.ai) — the Delphi web interface.
+- [app.delphi.fyi](https://app.delphi.fyi) — the Delphi web interface.
 - Authentication and wallet connectivity (Privy, WalletConnect, SIWE, EIP-7702 smart wallet flows).
 - The Delphi indexer and its API.
 - The hosted REE (Reproducible Execution Environment) auth and inference APIs.
