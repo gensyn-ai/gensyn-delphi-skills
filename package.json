@@ -25,7 +25,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "github:gensyn-ai/gensyn-delphi-sdk-private",
+    "@gensyn-ai/gensyn-delphi-sdk": "^1.0.0",
     "dotenv": "^16.4.0",
     "viem": "^2.21.0"
   }
