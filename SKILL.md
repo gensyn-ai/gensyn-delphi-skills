@@ -87,7 +87,6 @@ When required environment variables are not set, do NOT ask the user for their v
 3. Ask them to create a `.env` file in the project root themselves with those values.
 4. Wait for them to confirm the file is created before proceeding.
 5. **NEVER read the `.env` file** — treat it as a secret store the agent must not access.
-6. Only as a **last resort** (if the user explicitly asks you to create the file for them after already being prompted): offer to write the `.env` file using values they paste directly into chat.
 
 **Mandatory variables to communicate to the user:**
 
