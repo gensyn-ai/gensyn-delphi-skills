@@ -16,7 +16,7 @@ const status = (process.argv[2] ?? "open") as "open" | "awaiting_settlement" | "
 const category = process.argv[3] || undefined;
 const limit = Number(process.argv[4] ?? 20);
 
-const { markets } = await client.listMarkets({ status, category, limit, skip: 0 });
+const { markets } = await client.listMarkets({ status, category, limit, skip: 0, pricesAndImpliedProbabilities: true });
 
 if (!markets || markets.length === 0) {
   console.log("No markets found.");
@@ -25,13 +25,19 @@ if (!markets || markets.length === 0) {
 
 console.log("Found " + markets.length + " market(s) [status=" + status + "]:\n");
 for (const m of markets) {
-  const meta = m.metadata as { question?: string; outcomes?: string[]; category?: string } | null;
+  const meta = m.metadata;
+  const outcomes = meta?.outcomes ?? [];
   console.log("ID:       " + m.id);
+  console.log("URL:      " + m.marketUrl);
   console.log("Question: " + (meta?.question ?? "(no metadata)"));
-  console.log("Outcomes: " + (meta?.outcomes?.join(" / ") ?? "—"));
-  console.log("Category: " + (meta?.category ?? "—"));
+  console.log("Category: " + (m.category ?? "—"));
   console.log("Status:   " + m.status);
   console.log("Created:  " + new Date(m.createdAt).toLocaleString());
   console.log("Settled:  " + (m.settledAt ? new Date(m.settledAt).toLocaleString() : "—"));
+  if (outcomes.length > 0 && m.spotPrices && m.spotImpliedProbabilities) {
+    for (let i = 0; i < outcomes.length; i++) {
+      console.log("  [" + outcomes[i] + "] " + (m.spotImpliedProbabilities[i] * 100).toFixed(1) + "% | " + m.spotPrices[i].toFixed(4) + " USDC/share");
+    }
+  }
   console.log("---");
 }
