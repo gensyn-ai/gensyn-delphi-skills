@@ -17,47 +17,60 @@ const { markets } = await client.listMarkets(params);
 | `limit` | `number` | `50` | Max records returned |
 | `status` | `string` | — | `"open"` \| `"awaiting_settlement"` \| `"settled"` \| `"expired"` |
 | `category` | `string` | — | `"crypto"` \| `"culture"` \| `"economics"` \| `"miscellaneous"` \| `"politics"` \| `"sports"` |
-| `orderBy` | `string` | `"liquidity"` | `"liquidity"` \| `"created"` |
+| `orderBy` | `string` | `"liquidity"` | `"liquidity"` \| `"created"` \| `"settles_at"` (earliest settlement first) |
 | `verifiable` | `boolean` | — | If `true`, filter to markets with verifiable settlement only |
+| `pricesAndImpliedProbabilities` | `boolean` | `false` | When `true`, fetches on-chain spot prices and implied probabilities for each market via multicall |
 
 ### Market type
 
 ```typescript
 interface Market {
-  id: string;                       // Market proxy address — use as marketAddress in all SDK calls
-  status: string;                   // "open" | "awaiting_settlement" | "settled" | "expired"
-  deployer: string;                 // Deployer address
-  implementation: string;           // Logic contract address — NOT used for SDK calls
-  category: string | null;          // Market category (e.g. "crypto")
-  verifiable: boolean;              // true if market uses verifiable settlement
-  tradingFee: string | null;        // 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
-  metadataUri: string;              // IPFS/HTTP metadata URI
-  metadataUriContentHash: string;   // Hex hash of fetched metadata content
-  metadata: unknown;                // Parsed metadata (see shape below)
-  dataSources: unknown | null;      // Data source identifiers, or null
-  createdAt: string;                // ISO timestamp
+  id: string;                          // Market proxy address — use as marketAddress in all SDK calls
+  appMarketId: string;                 // UUID identifying the market in the Delphi app
+  marketUrl: string;                   // Direct link to the market on the Delphi app
+  status: string;                      // "open" | "awaiting_settlement" | "settled" | "expired"
+  deployer: string;                    // Deployer address
+  implementation: string;              // Logic contract address — NOT used for SDK calls
+  category: string | null;             // Market category (e.g. "crypto")
+  verifiable: boolean;                 // true if market uses verifiable settlement
+  tradingFee: string | null;           // 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
+  metadataUri: string;                 // IPFS/HTTP metadata URI
+  metadataUriContentHash: string;      // Hex hash of fetched metadata content
+  metadata: MarketMetadata | null;     // Parsed and typed metadata
+  dataSources: unknown | null;         // Data source identifiers, or null
+  createdAt: string;                   // ISO timestamp
   fetchedAt: string | null;
   fetchResponseStatus: string | null;
-  resolvesAt: string | null;        // ISO timestamp for when market resolves
-  settlesAt: string | null;         // ISO timestamp for scheduled settlement
-  winningOutcomeIdx: string | null; // Winning outcome index string, if settled
-  proof: string | null;             // Settlement proof string, or null
-  error: string | null;             // Resolution error message if settlement failed, or null
+  resolvesAt: string | null;           // ISO timestamp for when market resolves
+  settlesAt: string | null;            // ISO timestamp for scheduled settlement
+  winningOutcomeIdx: string | null;    // Winning outcome index string, if settled
+  proof: string | null;                // Settlement proof string, or null
+  error: string | null;                // Resolution error message if settlement failed, or null
+  // Only present when pricesAndImpliedProbabilities: true is passed:
+  spotPrices?: number[];               // Spot price per outcome as decimal-adjusted float (e.g. 0.6 = 0.60 USDC/share)
+  spotImpliedProbabilities?: number[]; // Implied probability per outcome as 0–1 float (e.g. 0.6 = 60%)
 }
 ```
 
-### Metadata shape (cast from `unknown`)
+### MarketMetadata type
+
+`market.metadata` is now typed as `MarketMetadata | null` — no cast needed.
 
 ```typescript
-const meta = market.metadata as {
-  question?: string;            // The market question
-  title?: string;               // Alternative title
-  description?: string;
-  category?: string;
-  outcomes?: string[];          // Outcome labels — index matches outcomeIdx
-  resolutionCriteria?: string;
-  endDate?: string;             // ISO date
-} | null;
+interface MarketMetadata {
+  question: string;          // The market question
+  outcomes: string[];        // Outcome labels — index matches outcomeIdx
+  model?: {
+    model_identifier?: string;
+    prompt_context?: string;
+  };
+  initial_liquidity?: string;
+  initial_pool?: string;
+  refund?: string;
+  market_creation_fee?: string;
+  version?: string;
+  [key: string]: unknown;    // extensible for future fields
+}
 ```
 
 The `outcomes` array is critical for labelling: `outcomes[0]` is the label for `outcomeIdx: 0`.
@@ -72,10 +85,18 @@ The `outcomes` array is critical for labelling: `outcomes[0]` is the label for `
 ## getMarket
 
 ```typescript
-const market = await client.getMarket({ id: "<market-id>" });
+const market = await client.getMarket({
+  id: "<market-id>",
+  pricesAndImpliedProbabilities: true, // optional: fetch spot prices and implied probabilities
+});
 ```
 
 Returns the same `Market` type. Pass `market.id` from `listMarkets` as the `id`.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `id` | `string` | — | Market proxy contract address (required) — this is `market.id` from `listMarkets`, e.g. `"0xf8022b5c02ab07ad52c3067a70578aa639483697"` |
+| `pricesAndImpliedProbabilities` | `boolean` | `false` | When `true`, populates `market.spotPrices` and `market.spotImpliedProbabilities` |
 
 ## Market status values
 
@@ -97,8 +118,7 @@ type MarketStatus = "open" | "awaiting_settlement" | "settled" | "expired";
 
 ```typescript
 const { markets } = await client.listMarkets({ status: "open", limit: 100 });
-const match = markets?.find(m => {
-  const meta = m.metadata as { question?: string } | null;
-  return meta?.question?.toLowerCase().includes("keyword");
-});
+const match = markets?.find(m =>
+  m.metadata?.question?.toLowerCase().includes("keyword")
+);
 ```

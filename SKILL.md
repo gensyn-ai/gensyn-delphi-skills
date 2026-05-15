@@ -12,6 +12,10 @@ Gensyn Delphi is a set of tools for deploying and interacting with information m
 
 Dynamic parimutuel markets are betting or information systems where prices (odds) emerge endogenously from the distribution of all participants' wagers rather than being set by a market maker. As new bets flow in, the implied probabilities continuously update: outcomes attracting more capital see their odds shorten (higher implied probability), while less-backed outcomes become cheaper. Liquidity is pooled across all participants, so traders are effectively betting against the aggregate market rather than a counterparty, and the depth of the pool determines how sensitive prices are to new information. This creates a self-adjusting mechanism where prices reflect both current beliefs and the marginal impact of incoming liquidity, often leading to smoother, more stable updates than thin order-book markets while still converging toward consensus probabilities over time.
 
+Important: spot price and expected payout move independently, and payouts are not fixed. Unlike fixed-payout markets (e.g. Polymarket) where a winning share always redeems for exactly $1, Delphi DPM payouts are determined at settlement: the entire pool is divided among winning shareholders, so payout per winning share=total winning shares/total pool.
+	
+The spot price is the marginal cost to buy the next share at the current moment — i.e. the local slope of the pricing curve. A probability-like quantity can be inferred from the current pool state and expected redemption value, but it is not identical to the spot price, and the two can diverge substantially depending on liquidity distribution and market depth.
+
 ## When to use this skill
 
 - User wants to list, search, or browse information markets
@@ -173,8 +177,10 @@ const client = new DelphiClient();
 |------|-------------------|-----------------|
 | Shares | 18-decimal bigint | `1n * 10n**18n` = 1 share |
 | USDC | 6-decimal bigint | `1_000_000n` = 1 USDC |
-| Implied probability | 18-decimal (1e18 = 100%) | `5n * 10n**17n` = 50% |
-| Spot price | 6-decimal (1e6 = 1.0 USDC/share) | `600_000n` = 0.60 USDC/share |
+| Implied probability (on-chain bigint) | 18-decimal (1e18 = 100%) | `5n * 10n**17n` = 50% |
+| Spot price (on-chain bigint) | 6-decimal (1e6 = 1.0 USDC/share) | `600_000n` = 0.60 USDC/share |
+| `market.spotPrices[i]` | plain `number` float | `0.6` = 0.60 USDC/share — already human-readable |
+| `market.spotImpliedProbabilities[i]` | plain `number` float (0–1) | `0.6` = 60% — already human-readable |
 
 ```typescript
 // Human → raw bigint (inputs to SDK)
@@ -200,33 +206,32 @@ const { markets } = await client.listMarkets({
   category: "crypto",   // crypto, culture, economics, miscellaneous, politics, sports
   limit: 20,
   skip: 0,
-  orderBy: "liquidity", // "liquidity" (default) | "created"
+  orderBy: "liquidity", // "liquidity" (default) | "created" | "settles_at" (soonest first)
   verifiable: true,     // optional: filter to markets with verifiable settlement
+  pricesAndImpliedProbabilities: true, // optional: fetch spot prices and implied probabilities
 });
 
 for (const market of markets ?? []) {
-  const meta = market.metadata as {
-    question?: string;
-    outcomes?: string[];
-    model?: { model_identifier?: string; prompt_context?: string };
-    initial_liquidity?: string;
-    version?: string;
-  } | null;
+  const meta = market.metadata; // typed as MarketMetadata | null — no cast needed
   console.log(market.id, meta?.question);
-  // market.id                     = market address — use this as marketAddress in all SDK calls
-  // market.implementation         = underlying logic contract (NOT used for SDK calls)
-  // market.category               = market category string (e.g. "crypto")
-  // market.verifiable             = true if market uses verifiable settlement
-  // market.tradingFee             = 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
-  //                                 convert: Number(market.tradingFee) / 1e18 * 100 → fee percentage
-  // market.winningOutcomeIdx      = set after settlement, otherwise null
-  // market.resolvesAt             = ISO timestamp for when market resolves, or null
-  // market.settlesAt              = ISO timestamp for scheduled settlement, or null
-  // market.proof                  = settlement proof string, or null
-  // market.error                  = resolution error message if settlement failed, or null
-  // market.fetchResponseStatus    = metadata fetch status string (e.g. "success"), or null
-  // market.metadataUriContentHash = hex hash of the fetched metadata content (e.g. "0x9434...")
-  // market.dataSources            = data source identifiers, or null
+  // market.id                        = market address — use this as marketAddress in all SDK calls
+  // market.appMarketId               = UUID identifying the market in the Delphi app
+  // market.marketUrl                 = direct link to the market on the Delphi app
+  // market.implementation            = underlying logic contract (NOT used for SDK calls)
+  // market.category                  = market category string (e.g. "crypto")
+  // market.verifiable                = true if market uses verifiable settlement
+  // market.tradingFee                = 18-decimal bigint string (e.g. "20000000000000000" = 2%); null if no fee
+  //                                    convert: Number(market.tradingFee) / 1e18 * 100 → fee percentage
+  // market.winningOutcomeIdx         = set after settlement, otherwise null
+  // market.resolvesAt                = ISO timestamp for when market resolves, or null
+  // market.settlesAt                 = ISO timestamp for scheduled settlement, or null
+  // market.proof                     = settlement proof string, or null
+  // market.error                     = resolution error message if settlement failed, or null
+  // market.fetchResponseStatus       = metadata fetch status string (e.g. "success"), or null
+  // market.metadataUriContentHash    = hex hash of the fetched metadata content (e.g. "0x9434...")
+  // market.dataSources               = data source identifiers, or null
+  // market.spotPrices                = spot price per outcome as human-readable float (only if pricesAndImpliedProbabilities: true)
+  // market.spotImpliedProbabilities  = implied probability per outcome as 0–1 float (only if pricesAndImpliedProbabilities: true)
 }
 ```
 
@@ -235,45 +240,31 @@ for (const market of markets ?? []) {
 > **Tip**: See `scripts/get-market.ts` for a complete working example.
 
 ```typescript
-const market = await client.getMarket({ id: "<market-id>" });
-const meta = market.metadata as { question?: string; outcomes?: string[] } | null;
-// market.id             = use as marketAddress for all SDK calls (quoteBuy, buyShares, etc.)
-// market.implementation = the logic contract address — NOT the marketAddress for SDK calls
+const market = await client.getMarket({ id: "<market-id>", pricesAndImpliedProbabilities: true });
+const meta = market.metadata; // typed as MarketMetadata | null — no cast needed
+// market.id                       = use as marketAddress for all SDK calls (quoteBuy, buyShares, etc.)
+// market.appMarketId              = UUID identifying the market in the Delphi app
+// market.marketUrl                = direct link to the market on the Delphi app
+// market.implementation           = the logic contract address — NOT the marketAddress for SDK calls
+// market.spotPrices               = spot price per outcome as human-readable float (e.g. [0.6, 0.4])
+// market.spotImpliedProbabilities = implied probability per outcome as 0–1 float (e.g. [0.6, 0.4])
 ```
 
-### Live prices (on-chain read via Gateway ABI)
+### Live prices
+
+The simplest way to get live prices is `pricesAndImpliedProbabilities: true` in `listMarkets` or `getMarket` — the SDK fetches them via multicall and returns human-readable floats on the market object:
 
 ```typescript
-import { createPublicClient, http, defineChain, type Abi } from "viem";
-import { DYNAMIC_PARIMUTUEL_GATEWAY_ABI, ERC20_ABI } from "@gensyn-ai/gensyn-delphi-sdk";
-// ERC20_ABI is also exported for direct token interactions if needed
-
-const chain = defineChain({
-  id: Number(process.env.GENSYN_CHAIN_ID),
-  name: "Gensyn Testnet",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: [process.env.GENSYN_RPC_URL!] } },
-});
-const publicClient = createPublicClient({ chain, transport: http(process.env.GENSYN_RPC_URL!) });
-const gateway = process.env.DELPHI_GATEWAY_CONTRACT as `0x${string}`;
-
-// Get implied probabilities for all outcomes
-const outcomeIndices = [0n, 1n]; // adjust for outcome count
-const probs = await publicClient.readContract({
-  address: gateway,
-  abi: DYNAMIC_PARIMUTUEL_GATEWAY_ABI as Abi,
-  functionName: "spotImpliedProbabilities",
-  args: [marketProxy, outcomeIndices],
-}) as bigint[];
-
-// Get spot prices
-const prices = await publicClient.readContract({
-  address: gateway,
-  abi: DYNAMIC_PARIMUTUEL_GATEWAY_ABI as Abi,
-  functionName: "spotPrices",
-  args: [marketProxy, outcomeIndices],
-}) as bigint[];
+// market.spotPrices[i]               — spot price as float (e.g. 0.6 = 0.60 USDC/share)
+// market.spotImpliedProbabilities[i] — implied probability as 0–1 float (e.g. 0.6 = 60%)
+if (market.spotPrices && market.spotImpliedProbabilities) {
+  for (let i = 0; i < (meta?.outcomes?.length ?? 0); i++) {
+    console.log(`[${i}] price: ${market.spotPrices[i].toFixed(4)} USDC/share | prob: ${(market.spotImpliedProbabilities[i] * 100).toFixed(2)}%`);
+  }
+}
 ```
+
+For custom on-chain reads (advanced), use the Gateway ABI directly via viem — see [reference/onchain.md](reference/onchain.md).
 
 ### Quote buy (read-only, no gas)
 
