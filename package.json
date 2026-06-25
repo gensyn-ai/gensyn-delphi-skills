@@ -6,6 +6,8 @@
     "get-market": "tsx scripts/get-market.ts",
     "quote-buy": "tsx scripts/quote-buy.ts",
     "quote-sell": "tsx scripts/quote-sell.ts",
+    "quote-redeem": "tsx scripts/quote-redeem.ts",
+    "quote-liquidate": "tsx scripts/quote-liquidate.ts",
     "buy-shares": "tsx scripts/buy-shares.ts",
     "sell-shares": "tsx scripts/sell-shares.ts",
     "list-positions": "tsx scripts/list-positions.ts",
@@ -14,6 +16,9 @@
     "liquidate": "tsx scripts/liquidate.ts",
     "get-wallet-balances": "tsx scripts/get-wallet-balances.ts",
     "list-recent-trades": "tsx scripts/list-recent-trades.ts",
+    "agent-tui": "tsx scripts/agent-tui/index.tsx",
+    "log-event": "tsx scripts/log-event.ts",
+    "compute-edge": "tsx scripts/compute-edge.ts",
     "testnet-faucet": "tsx scripts/testnet-faucet.ts",
     "bridge-eth-to-gensyn-testnet": "tsx scripts/bridge-eth-to-gensyn-testnet.ts",
     "bridge-eth-to-gensyn-mainnet": "tsx scripts/bridge-eth-to-gensyn-mainnet.ts",
@@ -21,12 +26,15 @@
   },
   "devDependencies": {
     "@types/node": "^25.3.3",
+    "@types/react": "^19.2.17",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "^1.1.0",
+    "@gensyn-ai/gensyn-delphi-sdk": "^1.2.1",
     "dotenv": "^16.4.0",
+    "ink": "^7.0.6",
+    "react": "^19.2.7",
     "viem": "^2.21.0"
   }
 }

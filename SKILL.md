@@ -50,6 +50,8 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/get-market.ts` | Get details for a specific market | `npx tsx scripts/get-market.ts <market-id>` |
 | `scripts/quote-buy.ts` | Get buy quote (read-only) | `npx tsx scripts/quote-buy.ts <market-address> <outcome-idx> <shares>` |
 | `scripts/quote-sell.ts` | Get sell quote (read-only) | `npx tsx scripts/quote-sell.ts <market-address> <outcome-idx> <shares>` |
+| `scripts/quote-redeem.ts` | Quote redemption payout for a settled market (read-only) | `npx tsx scripts/quote-redeem.ts <market-address> [wallet-address]` |
+| `scripts/quote-liquidate.ts` | Quote liquidation proceeds for an expired market (read-only) | `npx tsx scripts/quote-liquidate.ts <market-address> <outcome-idx>[,<idx>...] [wallet-address]` |
 | `scripts/buy-shares.ts` | Buy shares (on-chain) | `npx tsx scripts/buy-shares.ts <market-address> <outcome-idx> <shares> [slippage-pct]` |
 | `scripts/sell-shares.ts` | Sell shares (on-chain) | `npx tsx scripts/sell-shares.ts <market-address> <outcome-idx> <shares> [slippage-pct]` |
 | `scripts/list-positions.ts` | List wallet positions | `npx tsx scripts/list-positions.ts [wallet-address]` |
@@ -57,6 +59,9 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/liquidate.ts` | Liquidate positions in expired markets | `npx tsx scripts/liquidate.ts <market-address> [market-address ...]` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount\|unlimited]` |
 | `scripts/list-recent-trades.ts` | List recent trades via subgraph | `npx tsx scripts/list-recent-trades.ts <market-proxy-address> [limit]` |
+| `scripts/agent-tui/` | Live read-only Ink dashboard (Overview — with Edge View + Agent Logs — · Portfolio · My Activity · Markets, with market drill-down) | `npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet\|mainnet>` (both required) · keys: `1`-`4` screens, `↑↓` select, `⏎` detail, `r` refresh, `q` quit (add `--once` for a single frame) |
+| `scripts/log-event.ts` | Append a traceable event to the agent event log (Agent TUI → Overview → Agent Logs) | `npx tsx scripts/log-event.ts <type> "<message>"` |
+| `scripts/compute-edge.ts` | Compute edge (your prob − market's implied prob) for one or more market outcomes; prints the signal and feeds the Agent TUI → Overview → Edge View | `npx tsx scripts/compute-edge.ts <market-address> <outcome-idx> <your-prob> [<market> <outcome> <prob> ...]` |
 | `scripts/get-wallet-balances.ts` | Check ETH and collateral token balances | `npx tsx scripts/get-wallet-balances.ts` |
 | `scripts/testnet-faucet.ts` | Claim 1,000 testnet USDC from the Gensyn faucet | `npx tsx scripts/testnet-faucet.ts` |
 | `scripts/bridge-eth-to-gensyn-testnet.ts` | Bridge ETH from Sepolia to Gensyn Testnet | `npx tsx scripts/bridge-eth-to-gensyn-testnet.ts <amount-eth>` |
@@ -293,6 +298,32 @@ const { tokensOut } = await client.quoteSell({
 const payoutUsdc = Number(tokensOut) / 1e6;
 ```
 
+### Quote redeem / liquidate (read-only, no gas)
+
+For **closed** markets, spot price no longer reflects what a position is worth — the realizable value is the redemption payout (settled) or liquidation proceeds (expired). These quotes simulate the on-chain `redeem`/`liquidate` via `eth_call` (no gas, no state change) and **throw** if the position isn't redeemable/liquidatable (e.g. a losing settled outcome, or a market not yet closed), so wrap them in try/catch.
+
+> **Tip**: See `scripts/quote-redeem.ts` and `scripts/quote-liquidate.ts` for complete working examples.
+
+```typescript
+// Settled market: payout for the caller's winning shares. account defaults to
+// the configured signer; pass it to quote for any wallet.
+const { sharesIn, tokensOut } = await client.quoteRedeem({
+  marketAddress: "0x..." as `0x${string}`,
+  account: "0x..." as `0x${string}`,   // optional
+});
+const payoutUsdc = Number(tokensOut) / 1e6;  // 0 / throws for a losing outcome
+
+// Expired market: proceeds from liquidating the given outcomes.
+const { sharesIn: burned, totalTokensOut } = await client.quoteLiquidate({
+  marketAddress: "0x..." as `0x${string}`,
+  outcomeIndices: [0, 1],
+  account: "0x..." as `0x${string}`,   // optional
+});
+const proceedsUsdc = Number(totalTokensOut) / 1e6;
+```
+
+> **Valuing a portfolio across statuses**: use spot (`shares × spotPrice`) only for **open** markets. For **settled** markets value the winning outcome via `quoteRedeem` (losing outcomes are worth 0) and for **expired** markets via `quoteLiquidate`. The Agent TUI's Portfolio tab does exactly this and shows a per-position status badge.
+
 ### Buy shares (on-chain, with auto-approval)
 
 > **Tip**: See `scripts/buy-shares.ts` for a complete working example.
@@ -481,6 +512,74 @@ console.log(`Block: ${meta.block.number}, indexing errors: ${meta.hasIndexingErr
 ```
 
 Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewayLiquidations`, `gatewayWinnerSubmitteds`. All support filtering (`where`), ordering (`orderBy` + `orderDirection`), and pagination (`first` + `skip`).
+
+### TUI
+
+The user can visualize what the agent is doing live with the read-only Agent TUI dashboard — portfolio, positions, activity, markets, an Edge View and an Agent Logs reasoning stream — via `npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet>` (or `npm run agent-tui -- <wallet-address> <testnet|mainnet>`). The two helpers below feed its Agent Logs and Edge View panels.
+
+#### Tracing your reasoning (Agent Logs)
+
+`log-event` populates the Agent TUI's **Agent Logs** panel. Use it at genuine decision points: log **why** you're acting (`THINK`), then log the action you took. Event types:
+
+| Type | Use for |
+|------|---------|
+| `THINK` | The *reasoning* — what you observed, why the market looks mispriced, what edge you see, why this side and size. The important one. |
+| `BUY` | A buy you executed. |
+| `SELL` | A sell you executed. |
+| `LIQUIDATE` | Liquidating positions in an expired market. |
+| `REDEEM` | Redeeming winnings from a settled market. |
+| `SKIP` | A market you looked at and deliberately passed on (and why). |
+
+```bash
+npx tsx scripts/log-event.ts THINK "<the reasoning — why this trade>"
+npx tsx scripts/log-event.ts BUY   "<the action you took>"
+```
+
+- **`THINK`** is the important one — capture the reasoning. This is what the Agent Logs panel exists to show.
+- The **action** types (`BUY`/`SELL`/`LIQUIDATE`/`REDEEM`) are short notes of what followed the think. Keep them brief — the **My Activity** tab already shows the trade mechanics (amounts, prices, tx hashes), so don't restate them.
+- Use **`SKIP`** to record markets you evaluated but passed on, so the log shows what you considered, not just what you traded.
+
+Do **not** just describe the order. `"Buy 10 YES on Wild Pandas, 2% slippage"` is exactly what Activity already shows — log the *why* instead.
+
+Good:
+
+```bash
+npx tsx scripts/log-event.ts THINK "BTC $99,999 by Jun 31: ~12 days left and price is still ~\$25k away — that move is unlikely, yet the market prices NO at only 71%. Taking NO; small testnet size to validate."
+npx tsx scripts/log-event.ts BUY   "10 NO on BTC $99,999"
+```
+
+Log a THINK→action pair at genuine decision points, not every routine read. The `<type>` is case-insensitive and normalised to upper case. Events append to `$DELPHI_AGENT_LOG` (default `~/.delphi/agent-events.jsonl`); the file is created automatically.
+
+#### Computing edge before trading (Edge View)
+
+**Edge is the core trade signal — always compute it before you autonomously decide to buy or sell a market.** Edge is the gap between your own probability estimate for an outcome and the market's live implied probability:
+
+```
+edge = your probability − market's implied probability
+```
+
+A positive edge means the outcome is **underpriced** relative to your view (a buy candidate); a negative edge means it's **overpriced** (a sell / avoid). The bigger the absolute gap, the stronger the signal.
+
+`scripts/compute-edge.ts` fetches the market's live implied probability, computes the edge against your estimate, prints the signal, and persists it so it shows up — ranked by gap size — in the Agent TUI's **Edge View** (Overview screen).
+
+```bash
+# Single market outcome: your probability is 0.30 (or pass 30 for percent)
+npx tsx scripts/compute-edge.ts 0x1234…abcd 1 0.30
+
+# Several at once — repeat the (market, outcome, prob) triple
+npx tsx scripts/compute-edge.ts 0x1234…abcd 1 0.30  0x5678…ef01 0 0.62
+```
+
+`<your-prob>` is your estimate for that outcome (0–1 like `0.30`, or a percent like `30`); `<market-address>` is the market id from `listMarkets`/`getMarket`, and `<outcome-idx>` is the outcome's index. Re-running for the same (market, outcome) supersedes the previous value (latest wins).
+
+**Required decision flow when deciding whether to buy/sell a market autonomously:**
+
+1. Form your own probability estimate for the outcome.
+2. Run `compute-edge.ts` to compare it against the market's live implied probability.
+3. Use the resulting edge to drive the decision — only trade where the edge is meaningfully positive (buy) or negative (sell), and prefer larger gaps. If the edge is small or the wrong sign, `SKIP`.
+4. Then `log-event THINK` your reasoning (referencing the edge) and `log-event BUY`/`SELL` the action you took.
+
+Edges persist to `$DELPHI_AGENT_EDGES` (default `~/.delphi/agent-edges.jsonl`); the file is created automatically. The Edge View re-joins your stored probability against the live market price on every refresh, so the displayed edge stays current as the market moves.
 
 ## Error handling
 
