@@ -1,3 +1,7 @@
 node_modules/
 package-lock.json
 .env
+
+# Bazel: output symlinks and the bazelisk bootstrap dir, both created by ./bazelw
+/bazel-*
+/tmp/
