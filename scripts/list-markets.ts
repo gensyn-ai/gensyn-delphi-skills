@@ -1,7 +1,7 @@
 /**
  * List markets.
  * Usage: npx tsx scripts/list-markets.ts [status] [category] [limit]
- *   status   - open | awaiting_settlement | settled | expired  (default: open)
+ *   status   - open | awaiting_settlement | settled | expired | failed  (default: open)
  *   category - e.g. crypto, weather     (default: all)
  *   limit    - number of results        (default: 20)
  *
@@ -10,9 +10,12 @@
  *   npx tsx scripts/list-markets.ts open crypto
  *   npx tsx scripts/list-markets.ts settled "" 50
  */
+import type { MarketStatus } from "@gensyn-ai/gensyn-delphi-sdk";
 import { client } from "./client.js";
 
-const status = (process.argv[2] ?? "open") as "open" | "awaiting_settlement" | "settled" | "expired";
+// `failed` = automated settlement ran but could not resolve the question —
+// no winning outcome; recover with liquidate(), same as expired.
+const status = (process.argv[2] ?? "open") as MarketStatus;
 const category = process.argv[3] || undefined;
 const limit = Number(process.argv[4] ?? 20);
 

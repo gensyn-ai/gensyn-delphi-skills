@@ -12,7 +12,9 @@ export async function getWalletAddress(): Promise<`0x${string}`> {
   const { address } = await client.getSigner();
   return address;
 }
-export const gatewayAddress = (process.env.DELPHI_GATEWAY_CONTRACT ?? "0x7b8FDBD187B0Be5e30e48B1995df574A62667147") as `0x${string}`;
+// No `gatewayAddress` export: there are two gateways (automated settlement and
+// legacy) and each rejects the other's markets, so the correct one depends on the
+// market. Use `client.resolveGateway(marketAddress)` when you need it.
 export const rpcUrl = process.env.GENSYN_RPC_URL ?? "https://gensyn-testnet.g.alchemy.com/public";
 export const chainId = Number(process.env.GENSYN_CHAIN_ID ?? 685685);
 

@@ -4,10 +4,24 @@
 
 | Contract | Address |
 |----------|---------|
-| Gateway | `0x7b8FDBD187B0Be5e30e48B1995df574A62667147` (set via `DELPHI_GATEWAY_CONTRACT`) |
+| Gateway (automated settlement) | `0x22ea355D7218Dc86b4c83732cBbd01f7Ff2332b3` |
+| Factory (automated settlement) | `0x97d2b3F0614C8189343A38094629FCE2910b727A` |
+| Gateway (legacy) | `0x7b8FDBD187B0Be5e30e48B1995df574A62667147` |
+| Factory (legacy) | `0xd03CEC55802f0D44D844384E1144B25717315E5A` |
 | Chain ID | `685685` |
 
-The Gateway is the single entry point for all on-chain interactions. Market proxy addresses (from `market.id`) are passed as arguments to Gateway functions.
+A Gateway is the entry point for on-chain interactions. Market proxy addresses (from
+`market.id`) are passed as arguments to Gateway functions.
+
+There are two gateways: every new market is created on the automated-settlement one, and
+older markets remain on the legacy one. **A gateway reverts with
+`MarketProxyNotDeployedByFactory` for markets it did not deploy**, so never hardcode one.
+The SDK routes automatically; if you are dropping down to raw viem, ask it which gateway a
+market belongs to:
+
+```typescript
+const gateway = await client.resolveGateway(marketAddress);
+```
 
 ## viem client setup
 
@@ -23,7 +37,9 @@ const chain = defineChain({
 });
 
 const publicClient = createPublicClient({ chain, transport: http(process.env.GENSYN_RPC_URL!) });
-const gateway = process.env.DELPHI_GATEWAY_CONTRACT as `0x${string}`;
+// Resolve per market — do NOT hardcode a gateway, or calls on the other
+// deployment's markets will revert with MarketProxyNotDeployedByFactory.
+const gateway = await client.resolveGateway(marketAddress);
 ```
 
 ## Gateway read functions
@@ -157,7 +173,9 @@ WALLET_PRIVATE_KEY=0x<hex-private-key>
 # Optional overrides (defaults are set automatically by DELPHI_NETWORK=testnet):
 # GENSYN_RPC_URL=https://gensyn-testnet.g.alchemy.com/public
 # GENSYN_CHAIN_ID=685685
-# DELPHI_GATEWAY_CONTRACT=0x7b8FDBD187B0Be5e30e48B1995df574A62667147
+# Setting DELPHI_GATEWAY_CONTRACT pins all calls to one gateway and disables
+# per-market routing — only do this for a local/custom deployment.
+# DELPHI_GATEWAY_CONTRACT=0x22ea355D7218Dc86b4c83732cBbd01f7Ff2332b3
 ```
 
 ### CDP Server Wallet (production)
@@ -170,7 +188,9 @@ CDP_WALLET_ADDRESS=0x<wallet-address>
 # Optional overrides (defaults are set automatically by DELPHI_NETWORK=testnet):
 # GENSYN_RPC_URL=https://gensyn-testnet.g.alchemy.com/public
 # GENSYN_CHAIN_ID=685685
-# DELPHI_GATEWAY_CONTRACT=0x7b8FDBD187B0Be5e30e48B1995df574A62667147
+# Setting DELPHI_GATEWAY_CONTRACT pins all calls to one gateway and disables
+# per-market routing — only do this for a local/custom deployment.
+# DELPHI_GATEWAY_CONTRACT=0x22ea355D7218Dc86b4c83732cBbd01f7Ff2332b3
 ```
 
 CDP Server Wallets are managed by Coinbase Developer Platform. The SDK uses `@coinbase/cdp-sdk` under the hood.

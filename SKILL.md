@@ -135,18 +135,40 @@ The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the
 When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public`
 - Chain ID: `685685`
-- Gateway: `0x7b8FDBD187B0Be5e30e48B1995df574A62667147`
+- Gateway: `0x22ea355D7218Dc86b4c83732cBbd01f7Ff2332b3` (automated settlement)
+- Factory: `0x97d2b3F0614C8189343A38094629FCE2910b727A`
+- Legacy gateway: `0x7b8FDBD187B0Be5e30e48B1995df574A62667147` (pre-automated-settlement markets)
 - Token: `0x0724D6079b986F8e44bDafB8a09B60C0bd6A45a1`
 - API URL: `https://delphi-api.gensyn.ai/`
-- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet/1.0.0/gn`
+- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet-autoset/1.0.0/gn`
 
 When `DELPHI_NETWORK=mainnet`, the SDK automatically uses:
 - RPC URL: `https://gensyn-mainnet.g.alchemy.com/public`
 - Chain ID: `685689`
-- Gateway: `0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700`
+- Gateway: `0x982a67aE92D8de361957249fB2BB4a62BCc6A8d5` (automated settlement)
+- Factory: `0x9C73417f79a1361c6aF9Bd828343badEE1b84936`
+- Legacy gateway: `0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700` (pre-automated-settlement markets)
 - Token: `0x5b32c997211621d55a89Cc5abAF1cC21F3A6ddF5`
 - API URL: `https://api.delphi.fyi/`
-- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-mainnet/1.0.0/gn`
+- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-mainnet-autoset/1.0.0/gn`
+
+Delphi runs two deployments side by side. Every new market is created on the
+automated-settlement gateway, which is settled by an oracle; older markets live on the
+legacy gateway. Each gateway rejects the other's markets, so the SDK resolves the right
+one per market — pass any market address and it works. The subgraph default, however,
+covers the automated deployment only: subgraph queries for a legacy market come back
+empty (see `reference/subgraph.md`).
+
+Because settlement is now automated, a market can end up `failed` — the oracle ran but
+could not resolve the question. A `failed` market has **no winning outcome**, so
+`redeemMarket()` reverts and funds are recovered with `liquidate()`, exactly as for
+`expired`. Full status list: `open`, `awaiting_settlement`, `settled`, `expired`,
+`failed`.
+
+> The addresses and subgraph endpoints above, plus `client.resolveGateway()`,
+> `client.getMarketStatus()` and `subgraph.getMarketSettlement()`, require
+> `@gensyn-ai/gensyn-delphi-sdk@^2.0.0` (pinned in `package.json`). On an older SDK the
+> defaults still point at the legacy gateway and those methods do not exist.
 
 ### Optional overrides
 
@@ -156,7 +178,10 @@ These override the network defaults if you need to point at a custom endpoint:
 |----------|-------------|
 | `GENSYN_RPC_URL` | Custom RPC endpoint |
 | `GENSYN_CHAIN_ID` | Custom chain ID |
-| `DELPHI_GATEWAY_CONTRACT` | Custom gateway contract address |
+| `DELPHI_GATEWAY_CONTRACT` | Custom gateway address. **Pins every call to this gateway and disables per-market routing** — calls for markets it does not own will revert |
+| `DELPHI_LEGACY_GATEWAY_CONTRACT` | Custom legacy gateway address |
+| `DELPHI_FACTORY_CONTRACT` | Custom automated-settlement factory (used to route markets) |
+| `DELPHI_LEGACY_FACTORY_CONTRACT` | Custom legacy factory (used to route markets) |
 | `DELPHI_API_BASE_URL` | Custom API base URL |
 | `DELPHI_SUBGRAPH_URL` | Custom Goldsky subgraph endpoint |
 | `DELPHI_TOKEN_ADDRESS` | Override the ERC-20 collateral token address |
@@ -511,7 +536,7 @@ const meta = await subgraph.getMeta();
 console.log(`Block: ${meta.block.number}, indexing errors: ${meta.hasIndexingErrors}`);
 ```
 
-Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewayLiquidations`, `gatewayWinnerSubmitteds`. All support filtering (`where`), ordering (`orderBy` + `orderDirection`), and pagination (`first` + `skip`).
+Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewayLiquidations`, `gatewayMarketSettleds`, `gatewayMarketFaileds`, `marketResolutionRequesteds`. All support filtering (`where`), ordering (`orderBy` + `orderDirection`), and pagination (`first` + `skip`). Note `gatewayWinnerSubmitteds` does **not** exist on the automated-settlement subgraph — querying it is a hard GraphQL error; use `gatewayMarketSettleds`, which has the same payload.
 
 ### TUI
 

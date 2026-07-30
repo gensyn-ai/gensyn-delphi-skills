@@ -1,6 +1,6 @@
 # Subgraph (Goldsky) Reference
 
-The Delphi SDK includes a `SubgraphClient` that queries on-chain event data indexed by a [Goldsky](https://goldsky.com/) subgraph. This gives read-only access to historical buys, sells, redemptions, liquidations, and winner submissions — without needing an archive node or parsing raw logs.
+The Delphi SDK includes a `SubgraphClient` that queries on-chain event data indexed by a [Goldsky](https://goldsky.com/) subgraph. This gives read-only access to historical buys, sells, redemptions, liquidations, and settlements — without needing an archive node or parsing raw logs.
 
 ## Accessing the subgraph client
 
@@ -21,8 +21,16 @@ const subgraph = client.getSubgraph();
 
 | Network | Default endpoint |
 |---------|-----------------|
-| testnet | `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet/1.0.0/gn` |
-| mainnet | Not yet available |
+| testnet | `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-testnet-autoset/1.0.0/gn` |
+| mainnet | `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-mainnet-autoset/1.0.0/gn` |
+
+Both defaults index the **automated-settlement gateway only**. Markets created before
+automated settlement live on the legacy gateway and are indexed by the older
+`delphi-testnet` / `delphi-mainnet` subgraphs. A query for a legacy market against the
+default endpoint returns an **empty result rather than an error**, so if you are looking
+at historical activity and get nothing back, check which deployment the market belongs to
+(`client.resolveGateway(marketAddress)`) and set `DELPHI_SUBGRAPH_URL` to the legacy
+endpoint if needed.
 
 ## SubgraphClient API
 
@@ -113,7 +121,7 @@ interface SubgraphMeta {
 
 ## GraphQL schema entities
 
-The subgraph indexes six on-chain event types. Each entity is available as both a singular query (by `id`) and a plural collection query with filtering, ordering, and pagination.
+The subgraph indexes the following on-chain event types. Each entity is available as both a singular query (by `id`) and a plural collection query with filtering, ordering, and pagination.
 
 | Entity | Singular query | Collection query | Description |
 |--------|---------------|-----------------|-------------|
@@ -121,7 +129,9 @@ The subgraph indexes six on-chain event types. Each entity is available as both 
 | `GatewaySell` | `gatewaySell(id)` | `gatewaySells(...)` | Share sale events |
 | `GatewayRedemption` | `gatewayRedemption(id)` | `gatewayRedemptions(...)` | Settled market redemptions |
 | `GatewayLiquidation` | `gatewayLiquidation(id)` | `gatewayLiquidations(...)` | Position liquidations |
-| `GatewayWinnerSubmitted` | `gatewayWinnerSubmitted(id)` | `gatewayWinnerSubmitteds(...)` | Winner declaration events |
+| `GatewayMarketSettled` | `gatewayMarketSettled(id)` | `gatewayMarketSettleds(...)` | Oracle resolved the market (replaces the legacy `GatewayWinnerSubmitted`, same payload) |
+| `GatewayMarketFailed` | `gatewayMarketFailed(id)` | `gatewayMarketFaileds(...)` | Oracle could not resolve the market — no winning outcome |
+| `MarketResolutionRequested` | `marketResolutionRequested(id)` | `marketResolutionRequesteds(...)` | A keeper triggered oracle resolution |
 | `Initialized` | `initialized(id)` | `initializeds(...)` | Contract initialization events |
 
 ### Common fields (all entities)
@@ -173,12 +183,30 @@ The subgraph indexes six on-chain event types. Each entity is available as both 
 | `sharesIn` | `String` | Shares liquidated |
 | `totalTokensOut` | `BigInt` | Total USDC received (6-decimal) |
 
-### GatewayWinnerSubmitted fields
+### GatewayMarketSettled fields
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `marketProxy` | `String` | Market proxy address |
 | `winningOutcomeIdx` | `BigInt` | Index of the winning outcome |
+| `marketCreatorReward` | `BigInt` | Creator reward (6-decimal) |
+| `refund` | `BigInt` | Refunded portion of the initial deposit (6-decimal) |
+| `marketCreatorTradingFeesCut` | `BigInt` | Creator's share of trading fees (6-decimal) |
+
+### GatewayMarketFailed fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `marketProxy` | `String` | Market proxy address |
+
+There is no winning outcome — holders exit with `liquidate()`, not `redeem()`.
+
+### MarketResolutionRequested fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `marketProxy` | `String` | Market proxy address |
+| `keeper` | `String` | Address that triggered resolution |
 
 ## Collection query parameters
 
@@ -323,18 +351,23 @@ for (const liq of data.gatewayLiquidations) {
 }
 ```
 
-### Query winner submissions
+### Query settlements
+
+`gatewayMarketSettleds` and `gatewayMarketFaileds` are mutually exclusive: a market either
+resolved to an outcome or failed to resolve at all. The SDK also exposes
+`subgraph.getMarketSettlement(marketProxy)`, which fetches both plus any resolution
+requests in one call.
 
 ```typescript
-interface GatewayWinnerSubmitted {
+interface GatewayMarketSettled {
   id: string;
   timestamp_: string;
   marketProxy: string | null;
   winningOutcomeIdx: string | null;
 }
 
-const data = await subgraph.query<{ gatewayWinnerSubmitteds: GatewayWinnerSubmitted[] }>(`{
-  gatewayWinnerSubmitteds(
+const data = await subgraph.query<{ gatewayMarketSettleds: GatewayMarketSettled[] }>(`{
+  gatewayMarketSettleds(
     first: 10,
     orderBy: timestamp_, orderDirection: desc,
     where: { marketProxy: "${marketProxy}" }
