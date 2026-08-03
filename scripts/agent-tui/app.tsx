@@ -93,6 +93,17 @@ export function App({
         return;
       }
 
+      // Left/right arrows cycle between tabs (wrapping), also from anywhere —
+      // mirror the number-key behaviour and drop any open detail.
+      if (key.leftArrow || key.rightArrow) {
+        const dir = key.rightArrow ? 1 : -1;
+        const idx = PAGES.findIndex((p) => p.name === screen);
+        const next = PAGES[(idx + dir + PAGES.length) % PAGES.length];
+        setDetail(null);
+        setScreen(next.name);
+        return;
+      }
+
       if (detail) {
         if (key.return || key.escape) setDetail(null);
         return;

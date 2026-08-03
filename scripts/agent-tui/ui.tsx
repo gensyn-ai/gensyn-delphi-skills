@@ -187,7 +187,7 @@ export function StatusBar({
       <Text>{updatedAgo}</Text>
       {errors.length > 0 && <Text color="red">{"  ⚠ " + errors.join(" | ")}</Text>}
       <Box flexGrow={1} justifyContent="flex-end">
-        <Text dimColor>{"q quit · r refresh   "}</Text>
+        <Text dimColor>{"←→ tabs · q quit · r refresh   "}</Text>
         <Text dimColor>{clock}</Text>
       </Box>
     </Box>
