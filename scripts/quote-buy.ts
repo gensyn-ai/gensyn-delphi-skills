@@ -1,5 +1,5 @@
 /**
- * Quote the USDC cost to buy a given number of shares (read-only, no gas).
+ * Quote the collateral-token cost to buy a given number of shares (read-only, no gas).
  * Usage: npx tsx scripts/quote-buy.ts <market-address> <outcome-idx> <shares>
  *
  * Example:

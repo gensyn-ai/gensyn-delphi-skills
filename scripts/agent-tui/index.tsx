@@ -4,10 +4,11 @@
  * Portfolio · My Activity · Markets, with market drill-down. No signing — observe only.
  *
  * Usage:
- *   npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet>
+ *   npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet|competition-testnet>
  *   npx tsx scripts/agent-tui/index.tsx 0x… mainnet --once   # one frame, then exit
  *
- * Args (any order): a 0x wallet address and the network testnet|mainnet are BOTH
+ * Args (any order): a 0x wallet address and the network
+ *   testnet|mainnet|competition-testnet are BOTH
  *   REQUIRED — the network alone selects the RPC/API endpoints (no env fallback),
  *   and there is no .env signer fallback for the wallet. Reads DELPHI_API_ACCESS_KEY
  *   from .env.
@@ -26,10 +27,12 @@ const initialScreen = argv.find((a) => a.startsWith("--screen="))?.split("=")[1]
 // (no .env signer fallback) and the network, which alone selects the RPC/API
 // endpoints (no DELPHI_NETWORK/GENSYN_RPC_URL env fallback).
 const wallet = argv.find((a) => isAddress(a));
-const network = argv.find((a) => a === "testnet" || a === "mainnet");
+const network = argv.find(
+  (a) => a === "testnet" || a === "mainnet" || a === "competition-testnet",
+);
 if (!wallet || !network) {
   console.error(
-    "Usage: npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet>\n" +
+    "Usage: npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet|competition-testnet>\n" +
       "  Both a 0x wallet address and the network are required.",
   );
   process.exit(1);

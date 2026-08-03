@@ -58,11 +58,13 @@ const sharesOut = BigInt(Math.round(10 * 1e18));
 
 const { tokensIn } = await client.quoteBuy({ marketAddress, outcomeIdx, sharesOut });
 
-// Ensure USDC approval (no-op if already approved)
-await client.ensureTokenApproval({ marketAddress, minimumAmount: tokensIn });
-
 // 2% slippage
 const maxTokensIn = tokensIn * 102n / 100n;
+
+// Ensure USDC approval (no-op if already approved). Approve the cap, not the
+// quote — the buy can spend anything up to maxTokensIn.
+await client.ensureTokenApproval({ marketAddress, minimumAmount: maxTokensIn });
+
 const { transactionHash } = await client.buyShares({ marketAddress, outcomeIdx, sharesOut, maxTokensIn });
 ```
 

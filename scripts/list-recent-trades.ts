@@ -8,7 +8,7 @@
  *   npx tsx scripts/list-recent-trades.ts 0x1234...abcd
  *   npx tsx scripts/list-recent-trades.ts 0x1234...abcd 50
  */
-import { client, toUsdc, toShares } from "./client.js";
+import { client, collateralSymbol, toUsdc, toShares } from "./client.js";
 
 const marketProxy = process.argv[2];
 if (!marketProxy) {
@@ -73,8 +73,8 @@ for (const r of rows) {
     `${r.side}${pad}  ${r.time.toLocaleString()}  ` +
     `outcome ${r.outcomeIdx}  ` +
     `${r.shares.toFixed(4)} shares  ` +
-    `${dir} ${r.usdc.toFixed(4)} USDC  ` +
-    `@ ${(r.usdc / r.shares).toFixed(4)} USDC/share`
+    `${dir} ${r.usdc.toFixed(4)} ${collateralSymbol}  ` +
+    `@ ${(r.usdc / r.shares).toFixed(4)} ${collateralSymbol}/share`
   );
   console.log(`      wallet: ${r.wallet}`);
   console.log(`      tx:     ${r.txHash}`);

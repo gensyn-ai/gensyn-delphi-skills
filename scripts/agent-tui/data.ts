@@ -2,7 +2,7 @@
  * the portfolio / PnL / activity shapes the screens render. No React, no I/O
  * besides the SDK. Every source is fetched independently so one failure (e.g.
  * the subgraph) degrades to an empty section instead of crashing the UI. */
-import { DelphiClient, ERC20_ABI } from "@gensyn-ai/gensyn-delphi-sdk";
+import { DelphiClient, ERC20_ABI, type Network } from "@gensyn-ai/gensyn-delphi-sdk";
 import { createPublicClient, http } from "viem";
 import { shortAddr } from "./format.js";
 
@@ -14,7 +14,7 @@ function delphi(network: string): DelphiClient {
   let c = clients.get(network);
   if (!c) {
     c = new DelphiClient({
-      network: network as "testnet" | "mainnet",
+      network: network as Network,
       extraHeaders: {
         "CF-Access-Client-Id": process.env.CF_ACCESS_ID ?? "",
         "CF-Access-Client-Secret": process.env.CF_ACCESS_SECRET ?? "",
@@ -25,6 +25,19 @@ function delphi(network: string): DelphiClient {
   return c;
 }
 
+// Market reads on a competition network are competition-scoped: the Delphi API
+// serves one competition per request and `DELPHI_COMPETITION_ID` picks which.
+// Without it both listMarkets and getMarket read the *active* competition — so a
+// wallet holding positions in any other competition gets a 404 per market, losing
+// the price half of every P/L figure while the subgraph-derived cost basis (which
+// is competition-wide) still lands. Spread into the params rather than passed
+// directly so this typechecks against the pinned SDK 2.0.0, whose param types
+// predate `competitionId`.
+function competitionScope(network: string): { competitionId?: string } {
+  const id = network.startsWith("competition") ? process.env.DELPHI_COMPETITION_ID || undefined : undefined;
+  return (id ? { competitionId: id } : {}) as { competitionId?: string };
+}
+
 // A read-only on-chain client (per network) so balances reflect the *viewed*
 // wallet, not the configured signer (the SDK's balance helpers only read the
 // signer's address).
@@ -33,6 +46,8 @@ function publicClient(network: string) {
   let c = publics.get(network);
   if (!c) {
     // RPC endpoint is determined solely by the selected network — no env override.
+    // competition-testnet shares the testnet chain, so it falls through to the
+    // testnet RPC alongside plain testnet.
     const url =
       network === "mainnet"
         ? "https://gensyn-mainnet.g.alchemy.com/public"
@@ -92,6 +107,9 @@ export interface MarketRow {
 export interface Snapshot {
   wallet: string;
   network: string;
+  /** Competition the market reads were scoped to, when one is set (competition
+   * networks only). Undefined = the API's active competition. */
+  competitionId?: string;
   ts: number;
   eth?: number;
   usdc?: number;
@@ -101,9 +119,13 @@ export interface Snapshot {
   trades: Trade[];
   totalValue: number; // current market value of held shares
   totalCost: number; // average-cost basis of held shares (known positions only)
-  returnPct?: number; // unrealised return on cost across positions with known cost
+  /** Held positions with a known cost but no resolvable value (market not
+   * returned by the API, or a reverted quote). Excluded from unrealised/returnPct
+   * so an unknown value is not booked as a loss; surfaced so the gap is visible. */
+  unmarked: number;
+  returnPct?: number; // unrealised return on cost across positions marked on both sides
   realised: number; // realised P/L on shares sold (avg-cost)
-  unrealised: number; // value - cost of held shares
+  unrealised: number; // value - cost, over positions marked on both sides
   mtm: number; // realised + unrealised
   bought: number;
   sold: number;
@@ -315,6 +337,7 @@ export async function fetchSnapshot(
   const d = delphi(network);
   const pub = publicClient(network);
   const owner = wallet as `0x${string}`;
+  const scope = competitionScope(network);
 
   // Report each stage as it settles so the cold-start screen can show a rough
   // progress bar. The first five sources run in parallel, so each reports on its
@@ -331,7 +354,7 @@ export async function fetchSnapshot(
     );
 
   const [marketsR, positionsR, ethR, usdcR, tradesR] = await Promise.allSettled([
-    tap(withRetry(() => d.listMarkets({ status: "open", limit: 40, pricesAndImpliedProbabilities: true })), "markets"),
+    tap(withRetry(() => d.listMarkets({ status: "open", limit: 40, ...scope, pricesAndImpliedProbabilities: true })), "markets"),
     tap(withRetry(() => d.listPositions({ wallet, redeemedOrLiquidated: false, limit: 200 })), "positions"),
     tap(withRetry(() => pub.getBalance({ address: owner })), "ETH balance"),
     tap(withRetry(() => pub.readContract({ address: d.getTokenAddress(), abi: ERC20_ABI, functionName: "balanceOf", args: [owner] })), "token balance"),
@@ -377,7 +400,7 @@ export async function fetchSnapshot(
     else toFetch.push(id);
   }
   const fetched = await mapLimit(toFetch, 3, (id) =>
-    withRetry(() => d.getMarket({ id, pricesAndImpliedProbabilities: true })),
+    withRetry(() => d.getMarket({ id, ...scope, pricesAndImpliedProbabilities: true })),
   );
   fetched.forEach((r, k) => {
     const id = toFetch[k];
@@ -532,10 +555,14 @@ export async function fetchSnapshot(
 
   const totalValue = positions.reduce((s, p) => s + (p.value ?? 0), 0);
   const totalCost = positions.reduce((s, p) => s + (p.cost ?? 0), 0);
-  const valueWithCost = positions
-    .filter((p) => p.cost !== undefined)
-    .reduce((s, p) => s + (p.value ?? 0), 0);
-  const returnPct = totalCost > 0 ? ((valueWithCost - totalCost) / totalCost) * 100 : undefined;
+  // Unrealised P/L only over positions where *both* sides resolved. Counting a
+  // known cost against an unresolved value (market not returned by the API, quote
+  // reverted) would book that position as a 100% loss rather than as unknown —
+  // which is what a mis-scoped competition read used to do to an entire book.
+  const marked = positions.filter((p) => p.cost !== undefined && p.value !== undefined);
+  const markedCost = marked.reduce((s, p) => s + (p.cost as number), 0);
+  const markedValue = marked.reduce((s, p) => s + (p.value as number), 0);
+  const returnPct = markedCost > 0 ? ((markedValue - markedCost) / markedCost) * 100 : undefined;
 
   const bought = trades.filter((t) => t.kind === "BUY").reduce((s, t) => s + t.usd, 0);
   const sold = trades.filter((t) => t.kind === "SELL").reduce((s, t) => s + t.usd, 0);
@@ -565,7 +592,7 @@ export async function fetchSnapshot(
       }
     }
   }
-  const unrealised = valueWithCost - totalCost; // held value above cost basis
+  const unrealised = markedValue - markedCost; // held value above cost basis (marked positions only)
   const mtm = realised + unrealised;
 
   // Equity curve: cumulative net cash, chronological. Buys are cash out;
@@ -588,6 +615,7 @@ export async function fetchSnapshot(
   return {
     wallet,
     network,
+    competitionId: scope.competitionId,
     ts: now,
     eth: ethR.status === "fulfilled" ? Number(ethR.value as bigint) / 1e18 : undefined,
     usdc: usdcR.status === "fulfilled" ? Number(usdcR.value as bigint) / 1e6 : undefined,
@@ -597,6 +625,7 @@ export async function fetchSnapshot(
     trades,
     totalValue,
     totalCost,
+    unmarked: positions.filter((p) => p.cost !== undefined && p.value === undefined).length,
     returnPct,
     realised,
     unrealised,

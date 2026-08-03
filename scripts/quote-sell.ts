@@ -1,5 +1,5 @@
 /**
- * Quote the USDC payout for selling a given number of shares (read-only, no gas).
+ * Quote the collateral-token payout for selling a given number of shares (read-only, no gas).
  * Usage: npx tsx scripts/quote-sell.ts <market-address> <outcome-idx> <shares>
  *
  * Example:

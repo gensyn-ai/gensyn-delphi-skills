@@ -1,5 +1,5 @@
 /**
- * Quote the USDC you would receive by redeeming your winning shares in a SETTLED
+ * Quote the collateral you would receive by redeeming your winning shares in a SETTLED
  * market (read-only, no gas). Simulates the on-chain redeem, so it reverts if the
  * market isn't settled yet or the wallet holds no winning shares.
  *

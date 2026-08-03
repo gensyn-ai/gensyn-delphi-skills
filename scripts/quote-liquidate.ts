@@ -1,5 +1,5 @@
 /**
- * Quote the USDC you would receive by liquidating positions in an EXPIRED
+ * Quote the collateral you would receive by liquidating positions in an EXPIRED
  * (unsettled) market (read-only, no gas). Simulates the on-chain liquidate, so it
  * reverts if the market isn't liquidatable or the wallet holds no shares in the
  * given outcomes.

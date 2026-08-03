@@ -4,8 +4,12 @@
  *
  * Example:
  *   npx tsx scripts/get-market.ts 0x94d829cce7e8532aef2a829489c1c1296c111990
+ *
+ * Competition: set DELPHI_NETWORK=competition-testnet. Set
+ * DELPHI_COMPETITION_ID=<uuid> to read a market from a specific competition
+ * rather than the active one — a market outside it comes back 404 not found.
  */
-import { client } from "./client.js";
+import { client, competitionScope, collateralSymbol } from "./client.js";
 
 const marketId = process.argv[2];
 if (!marketId) {
@@ -13,7 +17,7 @@ if (!marketId) {
   process.exit(1);
 }
 
-const market = await client.getMarket({ id: marketId, pricesAndImpliedProbabilities: true });
+const market = await client.getMarket({ id: marketId, ...competitionScope, pricesAndImpliedProbabilities: true });
 const meta = market.metadata; // typed as MarketMetadata | null via the Market type
 const outcomes = meta?.outcomes ?? [];
 
@@ -30,7 +34,7 @@ if (outcomes.length > 0 && market.spotPrices && market.spotImpliedProbabilities)
   console.log("\nLive prices:");
   for (let i = 0; i < outcomes.length; i++) {
     console.log("  [" + i + "] " + outcomes[i]);
-    console.log("      Spot price:   " + market.spotPrices[i].toFixed(4) + " USDC/share");
+    console.log("      Spot price:   " + market.spotPrices[i].toFixed(4) + " " + collateralSymbol + "/share");
     console.log("      Implied prob: " + (market.spotImpliedProbabilities[i] * 100).toFixed(2) + "%");
   }
 }

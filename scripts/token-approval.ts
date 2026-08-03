@@ -1,19 +1,20 @@
 /**
- * Check or set USDC token approval for a market's gateway.
- * Usage: npx tsx scripts/token-approval.ts <market-address> [amount-usdc]
- *   If amount-usdc is omitted, shows current allowance only.
- *   If amount-usdc is provided, approves that amount (use "unlimited" for max approval).
+ * Check or set collateral-token approval for a market's gateway (USDC on Delphi,
+ * TST on the competition — both 6-decimal).
+ * Usage: npx tsx scripts/token-approval.ts <market-address> [amount]
+ *   If amount is omitted, shows current allowance only.
+ *   If amount is provided, approves that amount (use "unlimited" for max approval).
  *
  * Examples:
  *   npx tsx scripts/token-approval.ts 0x94d829cce7e8532aef2a829489c1c1296c111990
  *   npx tsx scripts/token-approval.ts 0x94d829cce7e8532aef2a829489c1c1296c111990 100
  *   npx tsx scripts/token-approval.ts 0x94d829cce7e8532aef2a829489c1c1296c111990 unlimited
  */
-import { client, toUsdc } from "./client.js";
+import { client, collateralSymbol, toUsdc } from "./client.js";
 
 const [, , addr, amountStr] = process.argv;
 if (!addr) {
-  console.error("Usage: npx tsx scripts/token-approval.ts <market-address> [amount-usdc|unlimited]");
+  console.error("Usage: npx tsx scripts/token-approval.ts <market-address> [amount|unlimited]");
   process.exit(1);
 }
 
@@ -34,7 +35,7 @@ if (amountStr === "unlimited") {
   await client.approveToken({ marketAddress });
 } else {
   const amount = BigInt(Math.round(Number(amountStr) * 1e6));
-  console.log("\nApproving " + amountStr + " USDC...");
+  console.log("\nApproving " + amountStr + " " + collateralSymbol + "...");
   await client.approveToken({ marketAddress, amount });
 }
 

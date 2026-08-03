@@ -46,8 +46,10 @@ if (addresses.length === 1) {
     marketAddress,
     outcomeIndices,
   });
+  // sharesIn is per-outcome — sum it for the headline figure.
+  const sharesBurned = sharesIn.reduce((sum, shares) => sum + shares, 0n);
   console.log("Liquidated: " + marketAddress);
-  console.log("Shares burned: " + (Number(sharesIn) / 1e18).toFixed(4));
+  console.log("Shares burned: " + (Number(sharesBurned) / 1e18).toFixed(4));
   console.log("Tokens out:    " + toUsdc(totalTokensOut));
   console.log("Transaction:   " + transactionHash);
 } else {

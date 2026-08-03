@@ -20,9 +20,10 @@ const outcomeIdx = Number(idxStr);
 const sharesIn = sharesToBigint(Number(sharesStr));
 const slippage = Number(slippageStr ?? 2);
 
-// 1. Quote
+// 1. Quote. Slippage is applied in basis points so fractional percentages work.
 const { tokensOut } = await client.quoteSell({ marketAddress, outcomeIdx, sharesIn });
-const minTokensOut = tokensOut * BigInt(100 - slippage) / 100n;
+const slippageBps = BigInt(Math.round(slippage * 100));
+const minTokensOut = tokensOut * (10_000n - slippageBps) / 10_000n;
 
 console.log("Market:    " + marketAddress);
 console.log("Outcome:   " + outcomeIdx);

@@ -1,6 +1,6 @@
 ---
 name: delphi
-description: "Gensyn Delphi information market tools. List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, winner submissions), check subgraph indexing status, redeem winnings from settled markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi information markets — browsing, researching, trading, querying historical on-chain data, managing positions, or checking balances."
+description: "Gensyn Delphi information market tools, including the Delphi agent trading competition. List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, settlements), check subgraph indexing status, redeem winnings from settled markets, liquidate expired or failed markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet, mainnet, or the agent trading competition (competition-testnet — LMSR markets with their own contracts, token and leaderboard at agent-competition.gensyn.ai). Invoke when the user wants to interact with Delphi information markets or the agent trading competition — browsing, researching, trading, competing, registering for the competition, querying historical on-chain data, managing positions, or checking balances."
 compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_API_ACCESS_KEY and wallet signing credentials are mandatory. Network defaults (RPC URL, chain ID, gateway contract, API URL) are set automatically based on DELPHI_NETWORK (default: testnet)."
 ---
 
@@ -8,7 +8,19 @@ compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_A
 
 Gensyn Delphi is a set of tools for deploying and interacting with information markets on Gensyn. Markets are user-owned and permissionless — Gensyn does not control markets, custody funds, or settle trades. The API is maintained for convenience. All interactions go through `DelphiClient` from the `@gensyn-ai/gensyn-delphi-sdk` package.
 
+> **Trading the agent competition?** The competition is a separate network
+> (`competition-testnet`) using **LMSR** markets, not the parimutuel markets
+> described below. The pricing maths, the token, the registration step and the
+> leaderboard are all different — read
+> **[reference/competition.md](reference/competition.md)** before trading, and
+> do not apply the parimutuel section below to it.
+
 ## How dynamic parimutuel markets work
+
+> This section describes **Delphi testnet/mainnet**. The competition uses LMSR,
+> where prices sum to 1, spot price *is* the implied probability, and a winning
+> share always pays exactly 1 token. See
+> [reference/competition.md](reference/competition.md).
 
 Dynamic parimutuel markets are betting or information systems where prices (odds) emerge endogenously from the distribution of all participants' wagers rather than being set by a market maker. As new bets flow in, the implied probabilities continuously update: outcomes attracting more capital see their odds shorten (higher implied probability), while less-backed outcomes become cheaper. Liquidity is pooled across all participants, so traders are effectively betting against the aggregate market rather than a counterparty, and the depth of the pool determines how sensitive prices are to new information. This creates a self-adjusting mechanism where prices reflect both current beliefs and the marginal impact of incoming liquidity, often leading to smoother, more stable updates than thin order-book markets while still converging toward consensus probabilities over time.
 
@@ -30,6 +42,8 @@ The spot price is the marginal cost to buy the next share at the current moment 
 - User wants recent trades for a market or wallet via the Goldsky subgraph
 - User wants to check their wallet ETH or token balances
 - User wants to get ETH or USDC to fund their wallet for trading (testnet faucet, bridging)
+- User wants to trade in, register for, or check their standing in the **agent trading competition** → load [reference/competition.md](reference/competition.md)
+- User mentions the competition, the leaderboard, `agent-competition.gensyn.ai`, or sets `DELPHI_NETWORK=competition-testnet`
 - Any question about Delphi information markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -59,7 +73,7 @@ This repository includes working example scripts in the `scripts/` folder that d
 | `scripts/liquidate.ts` | Liquidate positions in expired markets | `npx tsx scripts/liquidate.ts <market-address> [market-address ...]` |
 | `scripts/token-approval.ts` | Check or set token approval | `npx tsx scripts/token-approval.ts <market-address> [amount\|unlimited]` |
 | `scripts/list-recent-trades.ts` | List recent trades via subgraph | `npx tsx scripts/list-recent-trades.ts <market-proxy-address> [limit]` |
-| `scripts/agent-tui/` | Live read-only Ink dashboard (Overview — with Edge View + Agent Logs — · Portfolio · My Activity · Markets, with market drill-down) | `npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet\|mainnet>` (both required) · keys: `1`-`4` screens, `↑↓` select, `⏎` detail, `r` refresh, `q` quit (add `--once` for a single frame) |
+| `scripts/agent-tui/` | Live read-only Ink dashboard (Overview — with Edge View + Agent Logs — · Portfolio · My Activity · Markets, with market drill-down) | `npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet\|mainnet\|competition-testnet>` (both required) · keys: `1`-`4` screens, `↑↓` select, `⏎` detail, `r` refresh, `q` quit (add `--once` for a single frame) |
 | `scripts/log-event.ts` | Append a traceable event to the agent event log (Agent TUI → Overview → Agent Logs) | `npx tsx scripts/log-event.ts <type> "<message>"` |
 | `scripts/compute-edge.ts` | Compute edge (your prob − market's implied prob) for one or more market outcomes; prints the signal and feeds the Agent TUI → Overview → Edge View | `npx tsx scripts/compute-edge.ts <market-address> <outcome-idx> <your-prob> [<market> <outcome> <prob> ...]` |
 | `scripts/get-wallet-balances.ts` | Check ETH and collateral token balances | `npx tsx scripts/get-wallet-balances.ts` |
@@ -128,9 +142,9 @@ Make sure to also convey the following 2 points to the user -
 
 | Variable | Values | Default |
 |----------|--------|---------|
-| `DELPHI_NETWORK` | `"testnet"` \| `"mainnet"` | `"testnet"` |
+| `DELPHI_NETWORK` | `"testnet"` \| `"mainnet"` \| `"competition-testnet"` | `"testnet"` |
 
-The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the user explicitly wants mainnet.
+The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the user explicitly wants mainnet or the competition.
 
 When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public`
@@ -151,6 +165,21 @@ When `DELPHI_NETWORK=mainnet`, the SDK automatically uses:
 - Token: `0x5b32c997211621d55a89Cc5abAF1cC21F3A6ddF5`
 - API URL: `https://api.delphi.fyi/`
 - Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-mainnet-autoset/1.0.0/gn`
+
+When `DELPHI_NETWORK=competition-testnet` (the agent trading competition), the SDK automatically uses:
+- RPC URL: `https://gensyn-testnet.g.alchemy.com/public` (same chain as testnet)
+- Chain ID: `685685`
+- Gateway: `0x097599c9D966fF496284b892A8F13BF885b258ef` (**LmsrGateway** — single deployment, no legacy)
+- Factory: `0xEa9D0a78d0209916e88e363B8FDa3e23206Ff49b`
+- Token: `0x8A2d75753362Eb5D5669a2c22cbf394b26a0571F` (`TST`, 6 decimals — **not** USDC)
+- API URL: `https://delphi-api.gensyn.ai/` (shared testnet deployment; the client sends `X-Delphi-Mode: competition` automatically)
+- Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-agent-competition/1.0.0/gn`
+- Leaderboard: `https://agent-competition.gensyn.ai`
+
+> **The competition is not just different addresses.** It uses LMSR pricing
+> (winning shares pay exactly 1 token, prices sum to 1), needs a **testnet**
+> API key, and needs your wallet registered via DoraHacks before you can rank.
+> Read **[reference/competition.md](reference/competition.md)** before trading it.
 
 Delphi runs two deployments side by side. Every new market is created on the
 automated-settlement gateway, which is settled by an oracle; older markets live on the
@@ -186,6 +215,7 @@ These override the network defaults if you need to point at a custom endpoint:
 | `DELPHI_SUBGRAPH_URL` | Custom Goldsky subgraph endpoint |
 | `DELPHI_TOKEN_ADDRESS` | Override the ERC-20 collateral token address |
 | `DELPHI_SIGNER_TYPE` | `"private_key"` or `"cdp_server_wallet"` (default) |
+| `DELPHI_COMPETITION_ID` | Competition UUID scoping market reads in `list-markets.ts`, `get-market.ts` and the Agent TUI (competition networks only; ignored otherwise). Unset = the active competition |
 
 ## Client setup
 
@@ -358,14 +388,16 @@ const marketAddress = "0x..." as `0x${string}`;
 const outcomeIdx = 0;
 const sharesOut = BigInt(Math.round(10 * 1e18));  // 10 shares
 
-// 1. Quote
+// 1. Quote, and cap the spend with 2% slippage
 const { tokensIn } = await client.quoteBuy({ marketAddress, outcomeIdx, sharesOut });
-
-// 2. Ensure USDC approval (idempotent — only sends tx if needed)
-await client.ensureTokenApproval({ marketAddress, minimumAmount: tokensIn });
-
-// 3. Buy with 2% slippage
 const maxTokensIn = tokensIn * 102n / 100n;
+
+// 2. Ensure USDC approval (idempotent — only sends tx if needed).
+//    Approve maxTokensIn, not tokensIn: the buy can spend up to the cap, so an
+//    allowance sized to the quote reverts if the price moves within slippage.
+await client.ensureTokenApproval({ marketAddress, minimumAmount: maxTokensIn });
+
+// 3. Buy
 const { transactionHash } = await client.buyShares({
   marketAddress,
   outcomeIdx,
@@ -540,7 +572,7 @@ Available entities: `gatewayBuys`, `gatewaySells`, `gatewayRedemptions`, `gatewa
 
 ### TUI
 
-The user can visualize what the agent is doing live with the read-only Agent TUI dashboard — portfolio, positions, activity, markets, an Edge View and an Agent Logs reasoning stream — via `npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet>` (or `npm run agent-tui -- <wallet-address> <testnet|mainnet>`). The two helpers below feed its Agent Logs and Edge View panels.
+The user can visualize what the agent is doing live with the read-only Agent TUI dashboard — portfolio, positions, activity, markets, an Edge View and an Agent Logs reasoning stream — via `npx tsx scripts/agent-tui/index.tsx <wallet-address> <testnet|mainnet|competition-testnet>` (or `npm run agent-tui -- <wallet-address> <testnet|mainnet|competition-testnet>`). The two helpers below feed its Agent Logs and Edge View panels.
 
 #### Tracing your reasoning (Agent Logs)
 
@@ -629,3 +661,4 @@ Edges persist to `$DELPHI_AGENT_EDGES` (default `~/.delphi/agent-edges.jsonl`); 
 | [reference/onchain.md](reference/onchain.md) | Full Gateway ABI function list, direct `viem` read patterns, signing config |
 | [reference/subgraph.md](reference/subgraph.md) | Goldsky subgraph GraphQL schema, `SubgraphClient` API, entity types, filtering, raw query examples |
 | [reference/funding.md](reference/funding.md) | Getting ETH and USDC onto Gensyn (testnet faucet, OP Stack bridge, LayerZero USDC bridge) |
+| [reference/competition.md](reference/competition.md) | **The agent trading competition**: LMSR vs parimutuel pricing, registration, trading differences, the leaderboard, subgraph differences, failure modes |

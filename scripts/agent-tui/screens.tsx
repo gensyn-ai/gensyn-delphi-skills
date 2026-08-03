@@ -39,7 +39,12 @@ export function Overview({ snap, events, edges }: { snap: Snapshot; events: Agen
       <Box>
         <Panel title="WALLET" flexGrow={1}>
           <Stat label="ETH" value={snap.eth !== undefined ? num(snap.eth, 5) : "—"} />
-          <Stat label="USDC" value={snap.usdc !== undefined ? usd(snap.usdc) : "—"} color="green" />
+          {/* The competition trades TST, not USDC — same 6 decimals, different token. */}
+          <Stat
+            label={snap.network.startsWith("competition") ? "TST" : "USDC"}
+            value={snap.usdc !== undefined ? usd(snap.usdc) : "—"}
+            color="green"
+          />
           <Stat label="address" value={shortAddr(snap.wallet)} color="gray" />
           <Stat label="network" value={snap.network} color="cyan" />
         </Panel>
@@ -144,8 +149,31 @@ export function Markets({ snap, selected }: { snap: Snapshot; selected: number }
       {start + rows.length < snap.markets.length && (
         <Text dimColor>{`  ▼ ${snap.markets.length - start - rows.length} more`}</Text>
       )}
-      {snap.markets.length === 0 && <Text dimColor>no open markets</Text>}
+      {snap.markets.length === 0 && <EmptyMarkets snap={snap} />}
     </Panel>
+  );
+}
+
+// An empty market list is the one state a reader cannot tell apart from a broken
+// call, and on a competition network it usually has a specific cause: market reads
+// are scoped to one competition, and without DELPHI_COMPETITION_ID that is whichever
+// one the organisers have flagged active — often none. Say so here rather than
+// leaving "no open markets" to be debugged in the wrong place (list-markets.ts
+// prints the same hint).
+function EmptyMarkets({ snap }: { snap: Snapshot }) {
+  if (!snap.network.startsWith("competition")) return <Text dimColor>no open markets</Text>;
+  return (
+    <>
+      <Text dimColor>no open markets</Text>
+      {snap.competitionId ? (
+        <Text dimColor>{`  (scoped to competition ${snap.competitionId} — it may have no open markets)`}</Text>
+      ) : (
+        <>
+          <Text dimColor>  (no DELPHI_COMPETITION_ID set, so this reads the *active* competition,</Text>
+          <Text dimColor>   which may be unset or empty. Set DELPHI_COMPETITION_ID=&lt;uuid&gt; in .env.)</Text>
+        </>
+      )}
+    </>
   );
 }
 
@@ -168,6 +196,12 @@ export function Portfolio({ snap, selected }: { snap: Snapshot; selected: number
           <Text color={pnlColor(snap.realised)}>{signedUsd(snap.realised)}</Text>
           <Text dimColor>   MtM </Text>
           <Text color={pnlColor(snap.mtm)} bold>{signedUsd(snap.mtm)}</Text>
+          {/* Positions whose value could not be resolved are left out of unrealised
+              rather than counted as a total loss — flag how many, so a P/L that
+              covers only part of the book does not read as the whole book. */}
+          {snap.unmarked > 0 && (
+            <Text color="yellow">{`   ⚠ ${snap.unmarked} position${snap.unmarked === 1 ? "" : "s"} unpriced (excluded from unrealised)`}</Text>
+          )}
         </Box>
         <Box>
           <Box width={11}>

@@ -50,7 +50,7 @@ export function App({
       // it still fires on background refreshes but isn't shown then.
       setSnap(await fetchSnapshot(wallet, network, setProgress));
     } catch (e: any) {
-      setSnap((s) => s ?? ({ wallet, network, ts: Date.now(), markets: [], marketById: new Map(), positions: [], trades: [], totalValue: 0, totalCost: 0, realised: 0, unrealised: 0, mtm: 0, bought: 0, sold: 0, equityCurve: [], hourlyActivity: [], errors: ["fatal: " + String(e?.message ?? e)] } as Snapshot));
+      setSnap((s) => s ?? ({ wallet, network, ts: Date.now(), markets: [], marketById: new Map(), positions: [], trades: [], totalValue: 0, totalCost: 0, unmarked: 0, realised: 0, unrealised: 0, mtm: 0, bought: 0, sold: 0, equityCurve: [], hourlyActivity: [], errors: ["fatal: " + String(e?.message ?? e)] } as Snapshot));
     } finally {
       setRefreshing(false);
       inFlight.current = false;
