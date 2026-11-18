@@ -4,6 +4,8 @@
  * the subgraph) degrades to an empty section instead of crashing the UI. */
 import { DelphiClient, ERC20_ABI, type Network } from "@gensyn-ai/gensyn-delphi-sdk";
 import { createPublicClient, http } from "viem";
+import { MAINNET_RPC_URL, rpcUrlFor } from "../networks.js";
+import { readAgentEdges } from "./edges.js";
 import { shortAddr } from "./format.js";
 
 // Per-network Delphi clients so the network can be switched at runtime from the
@@ -15,6 +17,7 @@ function delphi(network: string): DelphiClient {
   if (!c) {
     c = new DelphiClient({
       network: network as Network,
+      rpcUrl: rpcUrlFor(network),
       extraHeaders: {
         "CF-Access-Client-Id": process.env.CF_ACCESS_ID ?? "",
         "CF-Access-Client-Secret": process.env.CF_ACCESS_SECRET ?? "",
@@ -50,7 +53,7 @@ function publicClient(network: string) {
     // testnet RPC alongside plain testnet.
     const url =
       network === "mainnet"
-        ? "https://gensyn-mainnet.g.alchemy.com/public"
+        ? MAINNET_RPC_URL
         : "https://gensyn-testnet.g.alchemy.com/public";
     c = createPublicClient({ transport: http(url) });
     publics.set(network, c);
@@ -101,6 +104,9 @@ export interface MarketRow {
   prices: number[];
   topIdx: number;
   liquidity: number;
+  /** ISO timestamp the market closes (scheduled settlement), falling back to the
+   * resolve time; undefined if neither is set. */
+  closesAt?: string;
   winningOutcomeIdx?: number | null; // set once settled, else null
 }
 
@@ -152,6 +158,7 @@ function toMarketRow(m: any): MarketRow {
     prices: m.spotPrices ?? [],
     topIdx,
     liquidity,
+    closesAt: m.settlesAt ?? m.resolvesAt ?? undefined,
     winningOutcomeIdx: m.winningOutcomeIdx != null ? Number(m.winningOutcomeIdx) : null,
   };
 }
@@ -386,9 +393,30 @@ export async function fetchSnapshot(
   // proxy address instead of the question. Serve fresh cache hits without a
   // request; only the cache-miss / stale ids hit the API, and those are
   // concurrency-capped to avoid the Cloudflare-tripping burst.
+  // Also resolve markets referenced only by a stored *edge*. Edge View needs each
+  // edge market's status to decide whether it's still tradeable, and a market you
+  // computed an edge on but have since fully exited (settled/liquidated) appears
+  // in neither active positions nor — if its trade fell outside the window — the
+  // trade list, so without this its status stays unknown and it lingers in Edge
+  // View. Scope to this network, matching edges.ts (legacy untagged edges = testnet).
+  const networkEdges = readAgentEdges().filter((e) => (e.network ?? "testnet") === network);
+  const edgeMarkets = networkEdges.map((e) => String(e.market).toLowerCase());
+  // Cached display labels (question + per-outcome name) captured by compute-edge.
+  // The competition API 404s a market outside the active competition, so for a
+  // market you traded in a now-inactive competition getMarket can't supply the
+  // question at all — this local cache is the only source of its name.
+  const edgeLabels = new Map<string, { question?: string; outcomes: Map<number, string> }>();
+  for (const e of networkEdges) {
+    const id = String(e.market).toLowerCase();
+    const entry = edgeLabels.get(id) ?? { question: undefined, outcomes: new Map<number, string>() };
+    if (e.question) entry.question = e.question;
+    if (e.outcome != null) entry.outcomes.set(Number(e.outcomeIdx ?? 0), e.outcome);
+    edgeLabels.set(id, entry);
+  }
   const referenced = new Set<string>([
     ...rawPositions.map((p: any) => String(p.marketProxy).toLowerCase()),
     ...trades.map((t) => t.market.toLowerCase()),
+    ...edgeMarkets,
   ]);
   const needed = [...referenced].filter((id) => !marketById.has(id));
   const toFetch: string[] = [];
@@ -415,6 +443,29 @@ export async function fetchSnapshot(
       else marketMiss.set(id, now); // record the miss so we stop hammering a 404
     }
   });
+  // Final fallback: any referenced market the API still couldn't resolve
+  // (competition 404 / off-UI) gets a minimal row from the edge store's cached
+  // label, so trade and log rows show the question instead of a raw proxy
+  // address. Deliberately no `status` — the market is closed/unknown, so it stays
+  // out of Edge View (which requires an open market) and out of closed-market
+  // valuation (which keys off an explicit settled/expired status).
+  for (const id of referenced) {
+    if (marketById.has(id)) continue;
+    const label = edgeLabels.get(id);
+    if (!label?.question) continue;
+    const outcomes: string[] = [];
+    for (const [idx, name] of label.outcomes) outcomes[idx] = name;
+    marketById.set(id, {
+      id,
+      question: label.question,
+      outcomes,
+      probs: [],
+      prices: [],
+      topIdx: 0,
+      liquidity: 0,
+      winningOutcomeIdx: null,
+    });
+  }
   tick("market details");
 
   // Average buy price per (market, outcome) from the trade window — the basis

@@ -1,7 +1,7 @@
 /** Shared agent-edge store: a JSONL file the `compute-edge` script appends edge
  * estimates to and the Agent TUI's Edge View reads. Single source of truth for
  * the path so the script and the TUI always agree. One JSON object per line:
- * { ts, market, outcomeIdx, prob, marketProb?, question?, outcome? }.
+ * { ts, market, outcomeIdx, prob, marketProb?, question?, outcome?, network? }.
  *
  * The agent's probability (`prob`) is the source of truth. The Edge View re-joins
  * it against the *live* market-implied probability from the current snapshot so
@@ -20,6 +20,7 @@ export interface AgentEdge {
   marketProb?: number; // market-implied prob captured at compute time
   question?: string; // cached question label (display fallback)
   outcome?: string; // cached outcome label (display fallback)
+  network?: string; // network the edge was computed on ("testnet" | "mainnet" | "competition-testnet"). Legacy entries lack it; treated as "testnet".
 }
 
 export function agentEdgePath(): string {

@@ -7,7 +7,7 @@ import React from "react";
 import type { MarketRow, Snapshot } from "./data.js";
 import { agentEdgePath, type AgentEdge } from "./edges.js";
 import { agentLogPath, type AgentEvent } from "./events.js";
-import { ago, ellipsize, num, pct01, pnlColor, probColor, shortAddr, signedPct, signedUsd, usd } from "./format.js";
+import { ago, dateShort, ellipsize, num, pct01, pnlColor, probColor, shortAddr, signedPct, signedUsd, usd } from "./format.js";
 import { Badge, Cell, FlexCell, Gauge, Panel, Sparkline, Stat } from "./ui.js";
 
 // Show only as many list rows as fit the terminal, scrolling to keep the
@@ -56,6 +56,9 @@ export function Overview({ snap, events, edges }: { snap: Snapshot; events: Agen
         </Panel>
         <Panel title="PORTFOLIO" flexGrow={1}>
           <Stat label="positions" value={snap.positions.length} />
+          {/* Spendable cash (collateral-token wallet balance) alongside deployed
+              value, so buying power reads at a glance next to held value. */}
+          <Stat label="cash" value={snap.usdc !== undefined ? usd(snap.usdc) : "—"} color="green" />
           <Stat label="held value" value={usd(snap.totalValue)} color="green" />
           <Stat label="open markets" value={snap.markets.length} />
           <Stat label="events" value={`${buys}B/${sells}S/${redeems}R/${liqs}L`} />
@@ -94,7 +97,13 @@ export function Overview({ snap, events, edges }: { snap: Snapshot; events: Agen
       </Box>
 
       <EdgeView snap={snap} edges={edges} />
-      <AgentLogs events={events} reserve={32} />
+      {/* reserve = the fixed chrome stacked above the log rows so the whole
+          Overview fits the terminal (an overflowing frame is what tears/flickers
+          on each refresh). Worst case: menu+status (2) + wallet/PnL/portfolio row
+          (8, PORTFOLIO's 5 stats being the tallest panel) + cash-flow panel (5) +
+          trades/positions row (9) + a full Edge View (10) + this panel's
+          border+title+overflow line (4) ≈ 38. */}
+      <AgentLogs events={events} marketById={snap.marketById} reserve={38} />
     </Box>
   );
 }
@@ -123,10 +132,11 @@ export function Markets({ snap, selected }: { snap: Snapshot; selected: number }
   const { start, rows } = windowSlice(snap.markets, selected, rowBudget(8));
   return (
     <Panel title={`MARKETS — ${snap.markets.length} open   ↑↓ select · ⏎ detail`} flexGrow={1}>
-      <Box>
+      <Box gap={2}>
         <FlexCell dim>Question</FlexCell>
         <Cell w={14} dim>Top outcome</Cell>
         <Cell w={18} dim>Probability</Cell>
+        <Cell w={12} dim align="right">Closes</Cell>
         <Cell w={12} dim align="right">Init Liq</Cell>
       </Box>
       {start > 0 && <Text dimColor>{`  ▲ ${start} more`}</Text>}
@@ -135,13 +145,14 @@ export function Markets({ snap, selected }: { snap: Snapshot; selected: number }
         const p = m.probs[m.topIdx];
         const sel = i === selected;
         return (
-          <Box key={m.id}>
+          <Box key={m.id} gap={2}>
             <FlexCell inverse={sel} bold={sel}>{(sel ? "▸ " : "  ") + m.question}</FlexCell>
             <Cell w={14}>{m.outcomes[m.topIdx] ?? "#" + m.topIdx}</Cell>
             <Box width={18}>
               <Gauge value={p ?? 0} width={9} />
               <Text color={probColor(p)}> {pct01(p)}</Text>
             </Box>
+            <Cell w={12} align="right" dim>{dateShort(m.closesAt)}</Cell>
             <Cell w={12} align="right">{usd(m.liquidity)}</Cell>
           </Box>
         );
@@ -183,7 +194,12 @@ export function Portfolio({ snap, selected }: { snap: Snapshot; selected: number
     <Box flexDirection="column">
       <Panel title="PORTFOLIO">
         <Box flexWrap="wrap">
-          <Text dimColor>value </Text>
+          {/* Free cash = spendable wallet balance of the collateral token
+              (TST on the competition, USDC otherwise), i.e. buying power not
+              yet deployed into positions. */}
+          <Text dimColor>cash </Text>
+          <Text color="green" bold>{snap.usdc !== undefined ? usd(snap.usdc) : "—"}</Text>
+          <Text dimColor>   value </Text>
           <Text color="green" bold>{usd(snap.totalValue)}</Text>
           <Text dimColor>   cost basis </Text>
           <Text>{usd(snap.totalCost)}</Text>
@@ -319,8 +335,15 @@ interface EdgeRow {
 // live market-implied probability from the snapshot (falling back to the value
 // captured at compute time), and rank by the size of the gap.
 function edgeRows(snap: Snapshot, edges: AgentEdge[]): EdgeRow[] {
+  // The edge store is a single global file shared across networks. Keep only
+  // edges computed on the network being viewed, so a testnet edge (whose market
+  // isn't in the competition snapshot, and would render with its stale captured
+  // probability) doesn't leak into the competition view. Legacy entries written
+  // before edges were network-tagged lack `network`; treat them as testnet, the
+  // SDK's default when DELPHI_NETWORK is unset.
   const latest = new Map<string, AgentEdge>();
   for (const e of edges) {
+    if ((e.network ?? "testnet") !== snap.network) continue;
     const key = String(e.market).toLowerCase() + "-" + Number(e.outcomeIdx ?? 0);
     const prev = latest.get(key);
     if (!prev || e.ts > prev.ts) latest.set(key, e);
@@ -331,7 +354,15 @@ function edgeRows(snap: Snapshot, edges: AgentEdge[]): EdgeRow[] {
     const outcomeIdx = Number(e.outcomeIdx ?? 0);
     const prob = Number(e.prob);
     const m = snap.marketById.get(market.toLowerCase());
-    const marketProb = m?.probs?.[outcomeIdx] ?? e.marketProb; // live, fallback to captured
+    // Edge is only actionable on an *open* market — once a market settles, expires
+    // or fails there's no live price to trade against, so a stored edge for it is
+    // stale and must not rank. Require the market to resolve as open. data.ts
+    // fetches every edge-referenced market (not just held/traded ones), so a
+    // settled/liquidated market is present here with a non-open status and drops
+    // out; a market that still can't be resolved (off-UI / 404) also drops, since
+    // we can't show a live edge for it anyway.
+    if (m?.status !== "open") continue;
+    const marketProb = m.probs?.[outcomeIdx] ?? e.marketProb; // live, fallback to captured
     rows.push({
       market,
       outcomeIdx,
@@ -381,9 +412,29 @@ function EdgeView({ snap, edges }: { snap: Snapshot; edges: AgentEdge[] }) {
   );
 }
 
+// Rewrite any 0x market address in a log line to that market's question, so the
+// action rows read "2.10 'No' on Will Joseph Chaplik win…" instead of a raw
+// proxy address. Falls back to the address (unchanged) when it isn't a resolved
+// market. The question is trimmed so a long title can't blow out the row.
+const ADDR_RE = /0x[0-9a-fA-F]{40}/g;
+function resolveMarketNames(text: string, marketById: Map<string, MarketRow>): string {
+  return text.replace(ADDR_RE, (addr) => {
+    const q = marketById.get(addr.toLowerCase())?.question;
+    return q ? `“${ellipsize(q, 60)}”` : addr;
+  });
+}
+
 // Agent Logs — the agent's reasoning and action stream, newest first. Surfaced
 // on the Overview; windows to the newest rows that fit and flags the overflow.
-function AgentLogs({ events, reserve }: { events: AgentEvent[]; reserve: number }) {
+function AgentLogs({
+  events,
+  marketById,
+  reserve,
+}: {
+  events: AgentEvent[];
+  marketById: Map<string, MarketRow>;
+  reserve: number;
+}) {
   const logs = events
     .filter((e) => typeof e.text === "string" && e.text.trim().length > 0)
     .slice()
@@ -398,8 +449,10 @@ function AgentLogs({ events, reserve }: { events: AgentEvent[]; reserve: number 
           {logs.slice(0, size).map((e, i) => (
             <Box key={i}>
               <Cell w={7} dim>{ago(e.ts)}</Cell>
-              <Cell w={8} color={EVENT_COLOR[e.type] ?? "white"} bold>{e.type}</Cell>
-              <FlexCell>{e.text}</FlexCell>
+              {/* w=10 fits the longest type, LIQUIDATE (9 chars), plus a gap —
+                  narrower and it truncates to "LIQUIDA…" and collides with the text. */}
+              <Cell w={10} color={EVENT_COLOR[e.type] ?? "white"} bold>{e.type}</Cell>
+              <FlexCell>{resolveMarketNames(e.text, marketById)}</FlexCell>
             </Box>
           ))}
           {logs.length > size && <Text dimColor>{`  ▼ ${logs.length - size} more`}</Text>}
@@ -424,6 +477,8 @@ export function MarketDetail({ snap, market }: { snap: Snapshot; market: MarketR
           <Text>{market.category ?? "—"}</Text>
           <Text dimColor>   liquidity </Text>
           <Text color="green">{usd(market.liquidity)}</Text>
+          <Text dimColor>   closes </Text>
+          <Text>{dateShort(market.closesAt)}</Text>
           <Text dimColor>   {shortAddr(market.id)}</Text>
         </Box>
       </Panel>

@@ -197,7 +197,7 @@ The slippage default is 0.5%. You'll need ETH on Ethereum mainnet to cover the L
 | Field | Value |
 |-------|-------|
 | Chain ID | 685689 |
-| RPC URL | `https://gensyn-mainnet.g.alchemy.com/public` |
+| RPC URL | `https://rpc-gensyn-mainnet.t.conduit.xyz` |
 | L1 Settlement | Ethereum mainnet (chain ID 1) |
 
 ---

@@ -43,6 +43,12 @@ const normProb = (s: string): number => {
   return Math.max(0, Math.min(1, p));
 };
 
+// Tag every edge with the network it was computed on so the Agent TUI's Edge
+// View can filter to the network it's viewing — otherwise a testnet edge would
+// surface (with a stale captured probability) when the TUI runs on the
+// competition, and vice-versa. Mirrors the SDK's default of "testnet" when unset.
+const network = process.env.DELPHI_NETWORK || "testnet";
+
 const pct = (n?: number) => (n === undefined ? "—" : (n * 100).toFixed(2) + "%");
 const signedPct = (n: number) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
 
@@ -62,7 +68,7 @@ for (let i = 0; i < args.length; i += 3) {
   const outcome = outcomes[outcomeIdx] ?? `#${outcomeIdx}`;
   const edge = marketProb !== undefined ? prob - marketProb : undefined;
 
-  appendAgentEdge({ ts: Date.now(), market: marketAddress, outcomeIdx, prob, marketProb, question, outcome });
+  appendAgentEdge({ ts: Date.now(), market: marketAddress, outcomeIdx, prob, marketProb, question, outcome, network });
 
   console.log("");
   console.log(question);

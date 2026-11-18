@@ -26,8 +26,21 @@ export const ago = (ms: number): string => {
   return Math.floor(s / 86400) + "d";
 };
 
+// Compact absolute date for a market close/settlement time, e.g. "9 Aug 26".
+// Returns "—" for a missing or unparseable timestamp.
+export const dateShort = (iso?: string | null): string => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+};
+
+// Minute resolution, deliberately: <Clock/> ticks every second but only commits
+// when this string changes, so dropping seconds turns a per-second frame write
+// (which tears a terminal-taller-than-the-window frame — the flicker) into a
+// once-a-minute one.
 export const clockStr = (): string =>
-  new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
 // Block-eighth glyphs — index 0 (empty) .. 8 (full). Borrowed from the
 // delphi-monitoring-tui render_bar trick; the prettiest cheap sparkline going.

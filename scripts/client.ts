@@ -1,7 +1,9 @@
 import "dotenv/config";
 import { DelphiClient } from "@gensyn-ai/gensyn-delphi-sdk";
+import { rpcUrlFor } from "./networks.js";
 
 export const client = new DelphiClient({
+  rpcUrl: rpcUrlFor(process.env.DELPHI_NETWORK),
   extraHeaders: {
     "CF-Access-Client-Id": process.env.CF_ACCESS_ID ?? "",
     "CF-Access-Client-Secret": process.env.CF_ACCESS_SECRET ?? "",

@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { fetchSnapshot, type LoadProgress, type MarketRow, type Snapshot } from "./data.js";
 import { readAgentEdges, type AgentEdge } from "./edges.js";
 import { readAgentEvents, type AgentEvent } from "./events.js";
-import { ago, clockStr } from "./format.js";
+import { ago } from "./format.js";
 import { Activity, Markets, MarketDetail, Overview, Portfolio } from "./screens.js";
 import { Gauge, MenuBar, PAGES, StatusBar } from "./ui.js";
 
@@ -36,15 +36,26 @@ export function App({
   const [detail, setDetail] = useState<MarketRow | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState<LoadProgress | null>(null);
-  const [clock, setClock] = useState(clockStr());
   const inFlight = useRef(false);
+
+  // Guarded setters: the events/edges files are re-read on every 1s tick, but
+  // reading always yields a fresh array reference. Updating state unconditionally
+  // would re-render the whole tree once a second and — when the frame is taller
+  // than the terminal — flicker. Only commit when the content signature (length +
+  // serialised newest entry) actually changed, so an unchanged file is a no-op re-render.
+  const setEventsIfChanged = useCallback((next: AgentEvent[]) => {
+    setEvents((prev) => (sig(prev) === sig(next) ? prev : next));
+  }, []);
+  const setEdgesIfChanged = useCallback((next: AgentEdge[]) => {
+    setEdges((prev) => (sig(prev) === sig(next) ? prev : next));
+  }, []);
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     setRefreshing(true);
-    setEvents(readAgentEvents());
-    setEdges(readAgentEdges());
+    setEventsIfChanged(readAgentEvents());
+    setEdgesIfChanged(readAgentEdges());
     try {
       // Progress only drives the cold-start screen (rendered while snap is null);
       // it still fires on background refreshes but isn't shown then.
@@ -61,16 +72,19 @@ export function App({
     void refresh();
     if (once) return;
     const dataTimer = setInterval(() => void refresh(), REFRESH_MS);
-    const clockTimer = setInterval(() => {
-      setClock(clockStr());
-      setEvents(readAgentEvents()); // cheap local read — keeps the reasoning stream live
-      setEdges(readAgentEdges()); // cheap local read — keeps the Edge View live
+    // Tail the local log/edge files every second so the reasoning stream and Edge
+    // View stay live between data refreshes. The guarded setters make this a no-op
+    // re-render unless the file content actually changed. The wall clock ticks
+    // independently inside <Clock/> so it never re-renders this tree.
+    const tailTimer = setInterval(() => {
+      setEventsIfChanged(readAgentEvents());
+      setEdgesIfChanged(readAgentEdges());
     }, 1000);
     return () => {
       clearInterval(dataTimer);
-      clearInterval(clockTimer);
+      clearInterval(tailTimer);
     };
-  }, [refresh, once]);
+  }, [refresh, once, setEventsIfChanged, setEdgesIfChanged]);
 
   useEffect(() => {
     if (once && snap) {
@@ -90,6 +104,17 @@ export function App({
       if (page) {
         setDetail(null);
         setScreen(page.name);
+        return;
+      }
+
+      // Left/right arrows cycle between tabs (wrapping), also from anywhere —
+      // mirror the number-key behaviour and drop any open detail.
+      if (key.leftArrow || key.rightArrow) {
+        const dir = key.rightArrow ? 1 : -1;
+        const idx = PAGES.findIndex((p) => p.name === screen);
+        const next = PAGES[(idx + dir + PAGES.length) % PAGES.length];
+        setDetail(null);
+        setScreen(next.name);
         return;
       }
 
@@ -156,10 +181,22 @@ export function App({
         positionCount={snap.positions.length}
         refreshing={refreshing}
         errors={snap.errors}
-        clock={clock}
       />
     </Box>
   );
 }
 
 const clamp = (i: number, len: number) => (len <= 0 ? 0 : Math.max(0, Math.min(len - 1, i)));
+
+/** Cheap content signature for append-only event/edge arrays. Equal signature ⇒
+ * nothing new to render, so the guarded setters can skip the update and avoid a
+ * full-tree re-render.
+ *
+ * We key on `length` plus the *content* of the newest entry rather than just its
+ * `ts`: once a session exceeds the read cap (`readAgentEvents(300)` /
+ * `readAgentEdges(500)`) `length` saturates, so a `ts`-only tail would collide on
+ * two same-millisecond appends (e.g. a rapid THINK→BUY pair) and hide the second
+ * one. Serialising the newest entry distinguishes those, since the sliding window
+ * makes it the freshly appended line. */
+const sig = (arr: { ts: number }[]): string =>
+  arr.length + ":" + (arr.length ? JSON.stringify(arr[arr.length - 1]) : "0");

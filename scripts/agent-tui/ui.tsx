@@ -1,7 +1,7 @@
 /** Shared Ink components: panels, tables, sparklines, gauges, badges, chrome. */
 import { Box, Text } from "ink";
-import React from "react";
-import { bar, probColor, sparkline, STATUS_NAMES, statusColor } from "./format.js";
+import React, { useEffect, useState } from "react";
+import { bar, clockStr, probColor, sparkline, STATUS_NAMES, statusColor } from "./format.js";
 
 export const ACCENT = "#7c5cff"; // delphi-ish violet
 
@@ -157,6 +157,21 @@ export function MenuBar({ current }: { current: string }) {
   );
 }
 
+/** Self-contained wall clock. Owns its own 1s interval and state so ticking the
+ * time never re-renders the App tree (which would flicker content taller than
+ * the terminal). Updates only when the displayed string actually changes. */
+export function Clock() {
+  const [t, setT] = useState(clockStr());
+  useEffect(() => {
+    const id = setInterval(() => setT((prev) => {
+      const next = clockStr();
+      return prev === next ? prev : next;
+    }), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <Text dimColor>{t}</Text>;
+}
+
 export function StatusBar({
   network,
   updatedAgo,
@@ -164,7 +179,6 @@ export function StatusBar({
   positionCount,
   refreshing,
   errors,
-  clock,
 }: {
   network: string;
   updatedAgo: string;
@@ -172,7 +186,6 @@ export function StatusBar({
   positionCount: number;
   refreshing: boolean;
   errors: string[];
-  clock: string;
 }) {
   return (
     <Box>
@@ -187,8 +200,8 @@ export function StatusBar({
       <Text>{updatedAgo}</Text>
       {errors.length > 0 && <Text color="red">{"  ⚠ " + errors.join(" | ")}</Text>}
       <Box flexGrow={1} justifyContent="flex-end">
-        <Text dimColor>{"q quit · r refresh   "}</Text>
-        <Text dimColor>{clock}</Text>
+        <Text dimColor>{"←→ tabs · q quit · r refresh   "}</Text>
+        <Clock />
       </Box>
     </Box>
   );
