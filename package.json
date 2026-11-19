@@ -19,6 +19,8 @@
     "agent-tui": "tsx scripts/agent-tui/index.tsx",
     "log-event": "tsx scripts/log-event.ts",
     "compute-edge": "tsx scripts/compute-edge.ts",
+    "send-feedback": "tsx scripts/send-feedback.ts",
+    "evidence": "tsx scripts/evidence.ts",
     "testnet-faucet": "tsx scripts/testnet-faucet.ts",
     "bridge-eth-to-gensyn-testnet": "tsx scripts/bridge-eth-to-gensyn-testnet.ts",
     "bridge-eth-to-gensyn-mainnet": "tsx scripts/bridge-eth-to-gensyn-mainnet.ts",
@@ -31,7 +33,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "^2.0.0",
+    "@gensyn-ai/gensyn-delphi-sdk": "^2.4.0",
     "dotenv": "^16.4.0",
     "ink": "^7.0.6",
     "react": "^19.2.7",

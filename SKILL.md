@@ -1,6 +1,6 @@
 ---
 name: delphi
-description: "Gensyn Delphi information market tools, including the Delphi agent trading competition. List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, settlements), check subgraph indexing status, redeem winnings from settled markets, liquidate expired or failed markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet, mainnet, or the agent trading competition (competition-testnet — LMSR markets with their own contracts, token and leaderboard at agent-competition.gensyn.ai). Invoke when the user wants to interact with Delphi information markets or the agent trading competition — browsing, researching, trading, competing, registering for the competition, querying historical on-chain data, managing positions, or checking balances."
+description: "Gensyn Delphi information market tools, including the Delphi Agent Competition on evidence mining (find evidence on live markets, sell it to Delphi, earn USDC.e rewards). List and filter markets (including verifiable-only filter), fetch market details with live on-chain prices and implied probabilities, quote buy/sell trades, execute buy and sell transactions (with automatic token approval and slippage protection), view portfolio positions, browse trade history, query on-chain event data via Goldsky subgraph (buys, sells, redemptions, liquidations, settlements), check subgraph indexing status, redeem winnings from settled markets, liquidate expired or failed markets, manage ERC-20 token allowances, and check wallet ETH and token balances. Also covers selling information (evidence) to Delphi and sending feedback. Uses the @gensyn-ai/gensyn-delphi-sdk npm package on Gensyn testnet or mainnet. Invoke when the user wants to interact with Delphi information markets or the agent competition: browsing, researching, trading, mining and submitting evidence, competing, registering for the competition, sending feedback, querying historical on-chain data, managing positions, or checking balances."
 compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_API_ACCESS_KEY and wallet signing credentials are mandatory. Network defaults (RPC URL, chain ID, gateway contract, API URL) are set automatically based on DELPHI_NETWORK (default: testnet)."
 ---
 
@@ -8,19 +8,13 @@ compatibility: "Requires dependencies installed via `npm install`. Only DELPHI_A
 
 Gensyn Delphi is a set of tools for deploying and interacting with information markets on Gensyn. Markets are user-owned and permissionless — Gensyn does not control markets, custody funds, or settle trades. The API is maintained for convenience. All interactions go through `DelphiClient` from the `@gensyn-ai/gensyn-delphi-sdk` package.
 
-> **Trading the agent competition?** The competition is a separate network
-> (`competition-testnet`) using **LMSR** markets, not the parimutuel markets
-> described below. The pricing maths, the token, the registration step and the
-> leaderboard are all different — read
-> **[reference/competition.md](reference/competition.md)** before trading, and
-> do not apply the parimutuel section below to it.
+> **Entering the Delphi Agent Competition on evidence mining?** Read
+> **[reference/competition.md](reference/competition.md)** first and follow it.
+> The competition runs on Delphi Mainnet from 25 November to 11 December 2026.
+> Agents earn rewards for evidence, not for trading, and submitting evidence
+> needs only a Mainnet API key (no signer, no ETH, no USDC).
 
 ## How dynamic parimutuel markets work
-
-> This section describes **Delphi testnet/mainnet**. The competition uses LMSR,
-> where prices sum to 1, spot price *is* the implied probability, and a winning
-> share always pays exactly 1 token. See
-> [reference/competition.md](reference/competition.md).
 
 Dynamic parimutuel markets are betting or information systems where prices (odds) emerge endogenously from the distribution of all participants' wagers rather than being set by a market maker. As new bets flow in, the implied probabilities continuously update: outcomes attracting more capital see their odds shorten (higher implied probability), while less-backed outcomes become cheaper. Liquidity is pooled across all participants, so traders are effectively betting against the aggregate market rather than a counterparty, and the depth of the pool determines how sensitive prices are to new information. This creates a self-adjusting mechanism where prices reflect both current beliefs and the marginal impact of incoming liquidity, often leading to smoother, more stable updates than thin order-book markets while still converging toward consensus probabilities over time.
 
@@ -42,8 +36,11 @@ The spot price is the marginal cost to buy the next share at the current moment 
 - User wants recent trades for a market or wallet via the Goldsky subgraph
 - User wants to check their wallet ETH or token balances
 - User wants to get ETH or USDC to fund their wallet for trading (testnet faucet, bridging)
-- User wants to trade in, register for, or check their standing in the **agent trading competition** → load [reference/competition.md](reference/competition.md)
-- User mentions the competition, the leaderboard, `agent-competition.gensyn.ai`, or sets `DELPHI_NETWORK=competition-testnet`
+- User wants to enter, register for, or check their standing in the **Delphi Agent Competition on evidence mining** → load [reference/competition.md](reference/competition.md)
+- User mentions the competition, evidence mining, the leaderboard or `competition.delphi.fyi`
+- User wants to sell information to Delphi, submit evidence on a market, or read a submission's result → load [reference/evidence.md](reference/evidence.md) and [reference/evidence-api.md](reference/evidence-api.md)
+- User or agent wants to send feedback or report a bug to the Delphi team → load [reference/feedback.md](reference/feedback.md)
+- User sets `DELPHI_NETWORK=competition-testnet` (the first competition, trading, now ended) → load [reference/competition-trading.md](reference/competition-trading.md)
 - Any question about Delphi information markets, or on-chain trading on Gensyn
 
 ## Installation
@@ -62,6 +59,8 @@ This repository includes working example scripts in the `scripts/` folder that d
 |--------|---------|-------|
 | `scripts/list-markets.ts` | List and filter markets | `npx tsx scripts/list-markets.ts [status] [category] [limit]` |
 | `scripts/get-market.ts` | Get details for a specific market | `npx tsx scripts/get-market.ts <market-id>` |
+| `scripts/evidence.ts` | The Evidence API of the agent competition: limits, entry state, submit evidence, read results (needs only a Mainnet API key) | `npm run evidence -- limits \| entry-state \| submit \| result \| list` |
+| `scripts/send-feedback.ts` | Send feedback to the Delphi team, or list your own entries (needs only a Mainnet API key and your wallet address) | `npx tsx scripts/send-feedback.ts --area <area> --text "<text>"` or `--list` |
 | `scripts/quote-buy.ts` | Get buy quote (read-only) | `npx tsx scripts/quote-buy.ts <market-address> <outcome-idx> <shares>` |
 | `scripts/quote-sell.ts` | Get sell quote (read-only) | `npx tsx scripts/quote-sell.ts <market-address> <outcome-idx> <shares>` |
 | `scripts/quote-redeem.ts` | Quote redemption payout for a settled market (read-only) | `npx tsx scripts/quote-redeem.ts <market-address> [wallet-address]` |
@@ -115,7 +114,7 @@ When required environment variables are not set, do NOT ask the user for their v
 
 | Variable | Where to get it |
 |----------|----------------|
-| `DELPHI_API_ACCESS_KEY` | **Testnet:** Generate at https://delphi-api-access.gensyn.ai/ · **Mainnet:** Generate at https://api-access.delphi.fyi/ |
+| `DELPHI_API_ACCESS_KEY` | Generate at https://api-access.delphi.fyi/ and pick **Testnet** or **Mainnet** on the switch. Each network has its own key: a testnet key does not work on mainnet, and the reverse |
 
 **Plus one of these signing options (tell the user to pick one):**
 
@@ -144,7 +143,7 @@ Make sure to also convey the following 2 points to the user -
 |----------|--------|---------|
 | `DELPHI_NETWORK` | `"testnet"` \| `"mainnet"` \| `"competition-testnet"` | `"testnet"` |
 
-The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the user explicitly wants mainnet or the competition.
+The SDK defaults to testnet — `DELPHI_NETWORK` is optional. Only set it if the user explicitly wants mainnet. The agent competition on evidence mining runs on mainnet and does not use the SDK's signer (see [reference/competition.md](reference/competition.md)).
 
 When `DELPHI_NETWORK=testnet` (default), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public`
@@ -166,7 +165,7 @@ When `DELPHI_NETWORK=mainnet`, the SDK automatically uses:
 - API URL: `https://api.delphi.fyi/`
 - Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-mainnet-autoset/1.0.0/gn`
 
-When `DELPHI_NETWORK=competition-testnet` (the agent trading competition), the SDK automatically uses:
+When `DELPHI_NETWORK=competition-testnet` (the first agent competition, trading with play money, now ended), the SDK automatically uses:
 - RPC URL: `https://gensyn-testnet.g.alchemy.com/public` (same chain as testnet)
 - Chain ID: `685685`
 - Gateway: `0x097599c9D966fF496284b892A8F13BF885b258ef` (**LmsrGateway** — single deployment, no legacy)
@@ -176,10 +175,10 @@ When `DELPHI_NETWORK=competition-testnet` (the agent trading competition), the S
 - Subgraph URL: `https://api.goldsky.com/api/public/project_cmnoqdag1obop01z3efnu8ssq/subgraphs/delphi-agent-competition/1.0.0/gn`
 - Leaderboard: `https://agent-competition.gensyn.ai`
 
-> **The competition is not just different addresses.** It uses LMSR pricing
-> (winning shares pay exactly 1 token, prices sum to 1), needs a **testnet**
-> API key, and needs your wallet registered via DoraHacks before you can rank.
-> Read **[reference/competition.md](reference/competition.md)** before trading it.
+> **This network is not just different addresses.** It uses LMSR pricing
+> (winning shares pay exactly 1 token, prices sum to 1) and needs a **testnet**
+> API key. See **[reference/competition-trading.md](reference/competition-trading.md)**.
+> It has nothing to do with the current competition on evidence mining.
 
 Delphi runs two deployments side by side. Every new market is created on the
 automated-settlement gateway, which is settled by an oracle; older markets live on the
@@ -661,4 +660,8 @@ Edges persist to `$DELPHI_AGENT_EDGES` (default `~/.delphi/agent-edges.jsonl`); 
 | [reference/onchain.md](reference/onchain.md) | Full Gateway ABI function list, direct `viem` read patterns, signing config |
 | [reference/subgraph.md](reference/subgraph.md) | Goldsky subgraph GraphQL schema, `SubgraphClient` API, entity types, filtering, raw query examples |
 | [reference/funding.md](reference/funding.md) | Getting ETH and USDC onto Gensyn (testnet faucet, OP Stack bridge, LayerZero USDC bridge) |
-| [reference/competition.md](reference/competition.md) | **The agent trading competition**: LMSR vs parimutuel pricing, registration, trading differences, the leaderboard, subgraph differences, failure modes |
+| [reference/competition.md](reference/competition.md) | **The Delphi Agent Competition on evidence mining**: setup, markets, rewards, ranking, prizes, limits, rules, failure modes. Start here for the competition |
+| [reference/evidence.md](reference/evidence.md) | What evidence earns and what does not, how to pick markets, how to write a submission, how to read a result |
+| [reference/evidence-api.md](reference/evidence-api.md) | The Evidence API: calls, fields, statuses, errors |
+| [reference/feedback.md](reference/feedback.md) | Sending feedback and bug reports to the Delphi team |
+| [reference/competition-trading.md](reference/competition-trading.md) | The first competition (trading on `competition-testnet`, ended): LMSR pricing, registration, leaderboard, failure modes |
