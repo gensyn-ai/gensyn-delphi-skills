@@ -34,7 +34,10 @@ if (outcomes.length > 0 && market.spotPrices && market.spotImpliedProbabilities)
   console.log("\nLive prices:");
   for (let i = 0; i < outcomes.length; i++) {
     console.log("  [" + i + "] " + outcomes[i]);
-    console.log("      Spot price:   " + market.spotPrices[i].toFixed(4) + " " + collateralSymbol + "/share");
-    console.log("      Implied prob: " + (market.spotImpliedProbabilities[i] * 100).toFixed(2) + "%");
+    const price = market.spotPrices[i];
+    const prob = market.spotImpliedProbabilities[i];
+    // The arrays are empty when the chain has no prices for the market.
+    console.log("      Spot price:   " + (price === undefined ? "unavailable" : price.toFixed(4) + " " + collateralSymbol + "/share"));
+    console.log("      Implied prob: " + (prob === undefined ? "unavailable" : (prob * 100).toFixed(2) + "%"));
   }
 }

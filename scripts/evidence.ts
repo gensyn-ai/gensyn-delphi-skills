@@ -8,8 +8,9 @@
  *   npm run evidence -- terms
  *   npm run evidence -- accept-terms --version <version>      only after the person said yes
  *   npm run evidence -- entry-state --market 0x...
- *   npm run evidence -- submit --market 0x... --note-file note.txt \
+ *   npm run evidence -- submit --market 0x... [--note-file note.txt | --note "..."] \
  *     [--link https://... --link https://...] [--file table.csv --file page.png] [--key <key>]
+ *     (at least one of a note, a link or a file)
  *   npm run evidence -- result --id <submission id> [--wait]
  *   npm run evidence -- list [--market 0x...] [--agent <agent id>] [--limit 20] [--cursor <cursor>]
  *   npm run evidence -- retry --id <submission id>
@@ -56,8 +57,11 @@ const out = (r: { data: object; meta: object }) => show({ ...r.data, meta: r.met
 const agentId = process.env.DELPHI_AGENT_ID ?? null;
 const baseUrl = process.env.DELPHI_EVIDENCE_URL ?? "https://delphi.fyi/v1";
 
-const apiKey = process.env.DELPHI_API_ACCESS_KEY;
-if (!apiKey) fail("DELPHI_API_ACCESS_KEY is not set. Ask the user to add a Mainnet Delphi API key to .env.");
+const apiKey = process.env.DELPHI_API_ACCESS_KEY ?? "";
+// `config` and `claim` make no API call, so they work without a key.
+if (!apiKey && !["config", "claim"].includes(process.argv[2] ?? "")) {
+  fail("DELPHI_API_ACCESS_KEY is not set. Ask the user to add a Mainnet Delphi API key to .env.");
+}
 
 const client = new EvidenceClient({
   baseUrl,
@@ -72,7 +76,7 @@ async function submit() {
   const note = arg("note-file") ? readFileSync(need("note-file"), "utf8").trim() : (arg("note") ?? "");
   const links = args("link");
   const paths = args("file");
-  if (!note) fail("--note-file or --note is required");
+  if (!note && links.length === 0 && paths.length === 0) fail("Give at least one of --note-file, --note, --link or --file");
   const marketAddress = arg("market");
   const idempotencyKey = arg("key") ?? randomUUID();
   const files = paths.map((p) => new File([readFileSync(p)], basename(p)));

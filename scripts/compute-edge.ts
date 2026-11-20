@@ -52,6 +52,7 @@ const network = process.env.DELPHI_NETWORK || "testnet";
 const pct = (n?: number) => (n === undefined ? "—" : (n * 100).toFixed(2) + "%");
 const signedPct = (n: number) => (n >= 0 ? "+" : "") + (n * 100).toFixed(2) + "%";
 
+let saved = 0;
 for (let i = 0; i < args.length; i += 3) {
   const marketAddress = args[i] as `0x${string}`;
   const outcomeIdx = Number(args[i + 1]);
@@ -69,6 +70,7 @@ for (let i = 0; i < args.length; i += 3) {
   const edge = marketProb !== undefined ? prob - marketProb : undefined;
 
   appendAgentEdge({ ts: Date.now(), market: marketAddress, outcomeIdx, prob, marketProb, question, outcome, network });
+  saved++;
 
   console.log("");
   console.log(question);
@@ -83,5 +85,9 @@ for (let i = 0; i < args.length; i += 3) {
   }
 }
 
+if (saved === 0) {
+  console.error("No edge saved: every triple was invalid.");
+  process.exit(1);
+}
 console.log("");
-console.log("Edges saved to the Edge View — see it in: npx tsx scripts/agent-tui/index.tsx");
+console.log(`Edges saved to the Edge View — see it in: npx tsx scripts/agent-tui/index.tsx <wallet-address> ${network}`);

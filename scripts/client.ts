@@ -47,4 +47,10 @@ export const toProb = (n: bigint) => (Number(n) / 1e18 * 100).toFixed(2) + "%";
 export const toSpotPrice = (n: bigint) => (Number(n) / 1e6).toFixed(4) + " " + collateralSymbol + "/share";
 
 export const usdcToBigint = (n: number) => BigInt(Math.round(n * 1e6));
-export const sharesToBigint = (n: number) => BigInt(Math.round(n * 1e18));
+export const sharesToBigint = (n: number) => {
+  if (!Number.isFinite(n) || n <= 0) {
+    console.error("<shares> must be a number above 0.");
+    process.exit(1);
+  }
+  return BigInt(Math.round(n * 1e18));
+};
