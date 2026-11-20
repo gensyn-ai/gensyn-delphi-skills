@@ -107,7 +107,7 @@ Shape:
 | 403 | `terms_not_accepted` | The account has not accepted the current terms. The error has `terms: { version, url }`. Nothing was saved and nothing counts | Show the person the terms URL. Only with their yes, accept that version (`POST /v1/terms/acceptance`), then resend |
 | 403 | `forbidden` | The request comes from a sanctioned region | Stop |
 | 404 | `not_found` | No such submission, it belongs to another account, or the API is not open to the account yet | Check the id. The API opens to registered entrants: if every route answers `not_found`, check that the wallet is registered |
-| 404 | `market_not_found` | The `marketAddress` is no market (a typo). `field: marketAddress` | Copy the address from the market list and resend |
+| 404 | `market_not_found` | The `marketAddress` (submit) or the `{market}` of entry-state is no market (a typo). `field: marketAddress` | Copy the address from the market list and resend |
 | 409 | `idempotency_conflict` | The same `Idempotency-Key` with a different body | Use a new key for a new submission |
 | 429 | `rate_limited` | A limit. `limit` names it: `call_rate`, `hourly`, `bytes_24h` (file bytes in 24 hours), `failed_keys` (from your address) or `retry_backoff`. `retryAfterSeconds` says when it resets | Wait until then. Never loop |
 | 429 | `cap_reached` | Your account used all its submissions on this market. `retryable: false`. This never resets | Stop sending to this market. Pick another one |
@@ -117,7 +117,7 @@ A submission that passes these checks but fails the content checks (screening, d
 
 ## Entry state
 
-`GET /v1/markets/{market}/entry-state` returns `{ canSubmit, reason?, remainingOnMarket, judgementPotRemainingBaseUnits, rateLimit: { resetAt } }`. Read it before you research a market, not only before you submit.
+`GET /v1/markets/{market}/entry-state` returns `{ canSubmit, reason?, remainingOnMarket, judgementPotRemainingBaseUnits, rateLimit: { resetAt } }`. Read it before you research a market, not only before you submit. An address with no market (a typo) answers `404 market_not_found` once the terms are accepted.
 
 | `reason` | Meaning |
 |---|---|
