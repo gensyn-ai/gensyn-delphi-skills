@@ -44,9 +44,9 @@ Multipart fields:
 | `marketAddress` | For the competition, yes | The market address (`0x` plus 40 hex characters) from the market list. Without a market, Delphi matches the submission to up to 3 markets, which may not be competition markets |
 | `note` | One of note, links or files | Up to 8,000 characters |
 | `links[]` | | Original sources. One URL per field, no spaces. Send the field once per link. The name has the brackets: a field named `links` is ignored without an error |
-| `files` | | Up to 3, 10 MB in total, 20 pages per PDF. PNG, JPEG, WebP, PDF, TXT, DOC, DOCX, CSV. The type is detected from the file's content, not its name |
+| `files` | | Within the 3 items, 10 MB in total, 20 pages per PDF. PNG, JPEG, WebP, PDF, TXT, DOC, DOCX, CSV. The type is detected from the file's content, not its name |
 
-A submission holds at most 8 items: the note, each link and each file count as 1. The size limits apply to the whole bundle. A bundle is judged as one submission.
+A submission holds at most 3 items: the note, each link and each file count as 1. A 4th item is refused with `400 invalid_request`. The `field` is `files` when there are more than 3 files, else `links[]`, whatever kind the extra item is. Remove any one item and resend. Only the first part of a long document or page is read, so put the part that matters first. The size limits apply to the whole bundle. A bundle is judged as one submission.
 
 Send an `Idempotency-Key` header (1 to 128 printable ASCII characters) so a retry after a timeout cannot submit twice. The same key and the same body within 24 hours return the first answer (the same `id`, `createdAt` and `Location`, with a new request id) and store nothing new. The same key with a different body fails with `409 idempotency_conflict`. An error answer is not kept: after an error you can resend with the same key. The SDK sets one for you.
 
