@@ -7,6 +7,7 @@ import { createPublicClient, http } from "viem";
 import { MAINNET_RPC_URL, rpcUrlFor } from "../networks.js";
 import { readAgentEdges } from "./edges.js";
 import { shortAddr } from "./format.js";
+import { basisKey, computePnl, isLiquidatable, valuePosition } from "./pnl.js";
 
 // Per-network Delphi clients so the network can be switched at runtime from the
 // TUI. The API key and signer fall back to env (DELPHI_API_ACCESS_KEY etc.); we
@@ -85,7 +86,7 @@ export interface EnrichedPosition {
   price?: number;
   value?: number;
   /** How `value` was derived: live spot, redemption (settled win), liquidation
-   * (expired), or a settled loss (worth 0). Undefined when no value resolved. */
+   * (expired or failed), or a settled loss (worth 0). Undefined when no value resolved. */
   valueBasis?: "spot" | "redeem" | "liquidate" | "settled-loss";
   cost?: number; // average-cost basis of the held shares (undefined if no buys in window)
   pnl?: number; // value - cost
@@ -468,29 +469,17 @@ export async function fetchSnapshot(
   }
   tick("market details");
 
-  // Average buy price per (market, outcome) from the trade window — the basis
-  // for cost / realised / unrealised P/L. Keyed lowercase "market-outcomeIdx".
-  const buyAgg = new Map<string, { usd: number; shares: number }>();
-  for (const t of trades)
-    if (t.kind === "BUY") {
-      const k = t.market.toLowerCase() + "-" + t.outcomeIdx;
-      const a = buyAgg.get(k) ?? { usd: 0, shares: 0 };
-      a.usd += t.usd;
-      a.shares += t.shares;
-      buyAgg.set(k, a);
-    }
-  const avgPrice = (market: string, outcomeIdx: number): number | undefined => {
-    const a = buyAgg.get(market.toLowerCase() + "-" + outcomeIdx);
-    return a && a.shares > 0 ? a.usd / a.shares : undefined;
-  };
+  // Running average-cost basis per (market, outcome), walked in trade order —
+  // the basis for cost / realised / unrealised P/L (see pnl.ts).
+  const basisPnl = computePnl(trades, (market) => marketById.get(market.toLowerCase())?.winningOutcomeIdx);
 
   const activePositions = rawPositions.filter((p: any) => BigInt(p.shares) > 0n);
 
   // Spot price is meaningless once a market closes, so closed-market positions are
   // valued at their real exit amount via read-only gateway simulations (no gas):
-  // settled markets redeem, expired markets liquidate. One redeem quote per
-  // settled market (redeem pays out the wallet's entire winning side); one
-  // liquidate quote per expired (market, outcome). Concurrency-capped; a revert
+  // settled markets redeem, expired and failed markets liquidate. One redeem
+  // quote per settled market (redeem pays out the wallet's entire winning side);
+  // one liquidate quote per expired or failed (market, outcome). Concurrency-capped; a revert
   // (nothing to redeem, not yet closed) leaves the value unset so the row shows
   // "—" rather than a misleading spot figure.
   const statusOf = (proxy: string) => marketById.get(proxy.toLowerCase())?.status;
@@ -524,7 +513,7 @@ export async function fetchSnapshot(
   tick("settled payouts");
 
   const expiredPositions = activePositions.filter(
-    (p: any) => statusOf(String(p.marketProxy)) === "expired",
+    (p: any) => isLiquidatable(statusOf(String(p.marketProxy))),
   );
   const liquidateByKey = new Map<string, bigint>();
   await mapLimit(expiredPositions, 4, async (p: any) => {
@@ -552,36 +541,18 @@ export async function fetchSnapshot(
       const status = m?.status ?? p.marketStatus;
       const price = m?.prices?.[idx];
 
-      // Value basis follows market status: spot while open, redemption once
-      // settled (winning outcome only; losing shares are worth 0), liquidation
-      // once expired. Falls back to undefined ("—") when a quote couldn't resolve.
-      let value: number | undefined;
-      let valueBasis: EnrichedPosition["valueBasis"];
-      if (status === "settled") {
-        const win = m?.winningOutcomeIdx;
-        if (win != null && win === idx) {
-          const t = redeemByMarket.get(id);
-          if (t !== undefined) {
-            value = Number(t) / 1e6;
-            valueBasis = "redeem";
-          }
-        } else if (win != null) {
-          value = 0;
-          valueBasis = "settled-loss";
-        }
-      } else if (status === "expired") {
-        const t = liquidateByKey.get(id + "-" + idx);
-        if (t !== undefined) {
-          value = Number(t) / 1e6;
-          valueBasis = "liquidate";
-        }
-      } else if (price !== undefined) {
-        value = shares * price;
-        valueBasis = "spot";
-      }
+      const { value, valueBasis } = valuePosition({
+        status,
+        outcomeIdx: idx,
+        shares,
+        price,
+        winningOutcomeIdx: m?.winningOutcomeIdx,
+        redeemQuote: redeemByMarket.get(id),
+        liquidateQuote: liquidateByKey.get(id + "-" + idx),
+      });
 
-      const avg = avgPrice(p.marketProxy, idx);
-      const cost = avg !== undefined ? avg * shares : undefined;
+      const basis = basisPnl.held.get(basisKey(p.marketProxy, idx));
+      const cost = basis && basis.shares > 0 ? (basis.cost / basis.shares) * shares : undefined;
       const pnl = cost !== undefined && value !== undefined ? value - cost : undefined;
       const pnlPct =
         cost !== undefined && cost > 0 && value !== undefined ? ((value - cost) / cost) * 100 : undefined;
@@ -618,31 +589,8 @@ export async function fetchSnapshot(
   const bought = trades.filter((t) => t.kind === "BUY").reduce((s, t) => s + t.usd, 0);
   const sold = trades.filter((t) => t.kind === "SELL").reduce((s, t) => s + t.usd, 0);
 
-  // Realised P/L on closed positions (avg-cost): proceeds − closedShares ×
-  // avgBuyPrice. Sells close the traded outcome; redemptions close the market's
-  // *winning* outcome (resolved from the market, since the event carries none);
-  // liquidations close one or more outcomes (per-leg basis). As with sells, a
-  // leg whose cost basis is unknown (buys outside the trade window) is skipped
-  // rather than booked as pure profit.
-  let realised = 0;
-  for (const t of trades) {
-    if (t.kind === "SELL") {
-      const avg = avgPrice(t.market, t.outcomeIdx);
-      if (avg !== undefined) realised += t.usd - t.shares * avg;
-    } else if (t.kind === "REDEEM") {
-      const win = marketById.get(t.market.toLowerCase())?.winningOutcomeIdx;
-      const avg = win != null ? avgPrice(t.market, win) : undefined;
-      if (avg !== undefined) realised += t.usd - t.shares * avg;
-    } else if (t.kind === "LIQUIDATE") {
-      const legs = t.legs ?? [];
-      const avgs = legs.map((leg) => avgPrice(t.market, leg.outcomeIdx));
-      // Only book it when every leg's basis is known, so proceeds and cost match.
-      if (legs.length && avgs.every((a) => a !== undefined)) {
-        const cost = legs.reduce((s, leg, i) => s + leg.shares * (avgs[i] as number), 0);
-        realised += t.usd - cost;
-      }
-    }
-  }
+  // Realised P/L on closed positions (running avg-cost, see computePnl).
+  const realised = basisPnl.realised;
   const unrealised = markedValue - markedCost; // held value above cost basis (marked positions only)
   const mtm = realised + unrealised;
 

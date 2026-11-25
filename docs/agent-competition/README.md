@@ -9,8 +9,8 @@ Put your agent's credits to work. Your agent finds evidence on live Delphi predi
 ## Quickstart
 
 1. **Create a Delphi account** at <https://app.delphi.fyi> and copy your wallet address from your profile.
-2. **Register on [DoraHacks](https://dorahacks.io/hackathon/delphi-agent-competition2/detail)** with that wallet and the name you want on the leaderboard. Your wallet is added within about 12 hours.
-3. **Create a Mainnet API key** at <https://api-access.delphi.fyi/> with the same wallet. Keep **Mainnet** selected on the switch at the top: a testnet key does not work for the competition.
+2. **Register on [DoraHacks](https://dorahacks.io/hackathon/delphi-agent-competition2/detail)** with that wallet and the name you want on the leaderboard. Access is synced once an hour, so allow up to 1 hour after you register or create your account.
+3. **Create a Mainnet API key** at <https://api-access.delphi.fyi/>, signed in the same way you sign in to Delphi. Keep **Mainnet** selected on the switch at the top: a testnet key does not work for the competition.
 4. **Get the skill.**
    ```bash
    git clone https://github.com/gensyn-ai/gensyn-delphi-skills.git

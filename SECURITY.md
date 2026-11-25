@@ -50,9 +50,9 @@ Delphi smart contracts are deployed on the Delphi network (EVM-compatible, Solid
 
 | Contract                 | Mainnet Address                              |
 | ------------------------ | -------------------------------------------- |
-| DelphiFactory            | [`0x4596d847eA56DCf9A37944c13793Af802Fc5D1eC`](https://gensyn-mainnet.explorer.alchemy.com/address/0x4596d847eA56DCf9A37944c13793Af802Fc5D1eC) |
-| DynamicParimutuelMarket  | [`0x2fc709DF2fb31D362355D1be3F81EEAB8d238C5f`](https://gensyn-mainnet.explorer.alchemy.com/address/0x2fc709DF2fb31D362355D1be3F81EEAB8d238C5f) |
-| DynamicParimutuelGateway | [`0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700`](https://gensyn-mainnet.explorer.alchemy.com/address/0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700) |
+| DelphiFactory            | [`0x4596d847eA56DCf9A37944c13793Af802Fc5D1eC`](https://explorer-gensyn-mainnet.t.conduit.xyz/address/0x4596d847eA56DCf9A37944c13793Af802Fc5D1eC) |
+| DynamicParimutuelMarket  | [`0x2fc709DF2fb31D362355D1be3F81EEAB8d238C5f`](https://explorer-gensyn-mainnet.t.conduit.xyz/address/0x2fc709DF2fb31D362355D1be3F81EEAB8d238C5f) |
+| DynamicParimutuelGateway | [`0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700`](https://explorer-gensyn-mainnet.t.conduit.xyz/address/0x4e4e85c52E0F414cc67eE88d0C649Ec81698d700) |
 
 Issues of interest include but are not limited to:
 

@@ -8,6 +8,7 @@
  *
  * Use `scripts/redeem.ts` for redemptions from settled markets.
  */
+import { outcomeIndicesFor } from "./address-match.js";
 import { client, toUsdc } from "./client.js";
 
 const addresses = process.argv.slice(2) as `0x${string}`[];
@@ -23,21 +24,11 @@ const { positions } = await client.listPositions({
   limit: 500,
 });
 
-const positionsInMarkets = (positions ?? []).filter((p) => addresses.includes(p.marketProxy as `0x${string}`));
-
-function outcomeIndicesFor(marketAddress: string): number[] {
-  return Array.from(
-    new Set(
-      positionsInMarkets
-        .filter((p) => p.marketProxy === marketAddress)
-        .map((p) => Number(p.outcomeIdx)),
-    ),
-  );
-}
+const marketPositions = positions ?? [];
 
 if (addresses.length === 1) {
   const marketAddress = addresses[0];
-  const outcomeIndices = outcomeIndicesFor(marketAddress);
+  const outcomeIndices = outcomeIndicesFor(marketPositions, marketAddress);
   if (outcomeIndices.length === 0) {
     console.error("No unredeemed positions for this market. Nothing to liquidate.");
     process.exit(1);
@@ -56,7 +47,7 @@ if (addresses.length === 1) {
   const results: { marketAddress: `0x${string}`; success: boolean; tokensOut?: bigint; error?: string }[] = [];
   let totalTokensOut = 0n;
   for (const marketAddress of addresses) {
-    const outcomeIndices = outcomeIndicesFor(marketAddress);
+    const outcomeIndices = outcomeIndicesFor(marketPositions, marketAddress);
     if (outcomeIndices.length === 0) {
       results.push({ marketAddress, success: false, error: "No positions for this market" });
       continue;
