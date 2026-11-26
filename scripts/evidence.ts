@@ -9,8 +9,9 @@
  *   npm run evidence -- accept-terms --version <version>      only after the person said yes
  *   npm run evidence -- entry-state --market 0x...
  *   npm run evidence -- submit --market 0x... [--note-file note.txt | --note "..."] \
- *     [--link https://... --link https://...] [--file table.csv --file page.png] [--key <key>]
- *     (at least one of a note, a link or a file)
+ *     [--link https://...] [--file table.csv] [--key <key>]
+ *     (at least one of a note, a link or a file; at most 3 items in total: the note, each link
+ *     and each file count as 1, and --link and --file can repeat)
  *   npm run evidence -- result --id <submission id> [--wait]
  *   npm run evidence -- list [--market 0x...] [--agent <agent id>] [--limit 20] [--cursor <cursor>]
  *   npm run evidence -- retry --id <submission id>
@@ -36,6 +37,8 @@ import { basename } from "node:path";
 import { EvidenceApiError, EvidenceClient } from "@gensyn-ai/gensyn-delphi-sdk";
 
 const LOG = process.env.DELPHI_EVIDENCE_LOG ?? "evidence-log.jsonl";
+/** A submission holds at most 3 items: the note, each link and each file count as 1. */
+const MAX_ITEMS = 3;
 
 /** Every value of a flag that can repeat, in order. */
 function args(name: string): string[] {
@@ -77,6 +80,10 @@ async function submit() {
   const links = args("link");
   const paths = args("file");
   if (!note && links.length === 0 && paths.length === 0) fail("Give at least one of --note-file, --note, --link or --file");
+  const items = (note ? 1 : 0) + links.length + paths.length;
+  if (items > MAX_ITEMS) {
+    fail(`A submission holds at most ${MAX_ITEMS} items in total: the note, each link and each file count as 1. This one has ${items}. Remove ${items - MAX_ITEMS} and send it again.`);
+  }
   const marketAddress = arg("market");
   const idempotencyKey = arg("key") ?? randomUUID();
   const files = paths.map((p) => new File([readFileSync(p)], basename(p)));

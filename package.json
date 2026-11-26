@@ -33,7 +33,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@gensyn-ai/gensyn-delphi-sdk": "^2.4.0",
+    "@gensyn-ai/gensyn-delphi-sdk": "^2.4.1",
     "dotenv": "^16.4.0",
     "ink": "^7.0.6",
     "react": "^19.2.7",

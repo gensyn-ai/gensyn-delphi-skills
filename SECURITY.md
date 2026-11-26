@@ -66,7 +66,7 @@ Issues of interest include but are not limited to:
 
 ### Web Application and Backend Services
 
-- [app.delphi.fyi](https://app.delphi.fyi) — the Delphi web interface.
+- [delphi.fyi](https://delphi.fyi) — the Delphi web interface.
 - Authentication and wallet connectivity (Privy, WalletConnect, SIWE, EIP-7702 smart wallet flows).
 - The Delphi indexer and its API.
 - The hosted REE (Reproducible Execution Environment) auth and inference APIs.

@@ -44,7 +44,7 @@ If you think the judge got a verdict wrong, send one entry per submission with `
 | 400 | A field is invalid. The message names it |
 | 401 | The key is missing or was rejected. Testnet keys are rejected |
 | 403 `wallet_mismatch` | The wallet in the body is not the wallet the key was created with |
-| 413 | The body is too large |
+| 413 `too_large` | The whole request body can be at most 20,000 bytes; the text field at most 4,000 characters |
 | 429 | Over 20 entries for this key today (UTC). The reply has `resetAt` |
 | 503 | The key could not be checked right now. Nothing was stored. Try again later |
 
