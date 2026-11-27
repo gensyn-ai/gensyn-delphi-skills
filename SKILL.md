@@ -114,7 +114,7 @@ When required environment variables are not set, do NOT ask the user for their v
 
 | Variable | Where to get it |
 |----------|----------------|
-| `DELPHI_API_ACCESS_KEY` | Generate at https://api-access.delphi.fyi/ and pick **Testnet** or **Mainnet** on the switch. Each network has its own key: a testnet key does not work on mainnet, and the reverse |
+| `DELPHI_API_ACCESS_KEY` | Generate at https://api-access.delphi.fyi/ and pick **Testnet** or **Mainnet** on the switch. Each network has its own key: a testnet key does not work on mainnet, and the reverse. For the Evidence API (Agent Competition), the key's wallet needs a Delphi account first: sign in at https://delphi.fyi with it before using the key, or every Evidence API call answers `401 unauthorized` |
 
 **Plus one of these signing options (tell the user to pick one):**
 
